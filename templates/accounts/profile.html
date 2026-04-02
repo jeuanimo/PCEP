@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}{{ user.username }} — Profile{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  {# ── Profile card ─────────────────────────────────────────────────── #}
+  <div class="col-md-4">
+    <div class="card card-coach p-4 text-center mb-4">
+      <div class="fs-1 text-primary mb-2"><i class="bi bi-person-circle"></i></div>
+      <h3 class="mb-0">{{ user.username }}</h3>
+      <p class="text-muted mb-2">{{ user.email }}</p>
+      {% if profile.study_streak %}
+      <div class="streak-badge mx-auto mb-2">
+        <i class="bi bi-fire"></i> {{ profile.study_streak }} day streak
+      </div>
+      {% endif %}
+      <small class="text-muted d-block">Longest streak: {{ profile.longest_streak }} days</small>
+      <small class="text-muted d-block mt-1">Member since {{ user.date_joined|date:"M d, Y" }}</small>
+    </div>
+
+    {# ── Summary stats ─────────────────────────────────────────────── #}
+    <div class="card card-coach p-4 mb-4">
+      <h5 class="mb-3"><i class="bi bi-bar-chart me-2"></i>Summary</h5>
+      <div class="row g-2 text-center">
+        <div class="col-6">
+          <div class="bg-light rounded p-2">
+            <div class="fw-bold fs-5">{{ total_quizzes }}</div>
+            <small class="text-muted">Quizzes</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2">
+            <div class="fw-bold fs-5 text-success">{{ passed_quizzes }}</div>
+            <small class="text-muted">Passed</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2">
+            <div class="fw-bold fs-5 text-primary">{{ completed_labs }}</div>
+            <small class="text-muted">Labs Done</small>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="bg-light rounded p-2">
+            <div class="fw-bold fs-5">{{ total_labs }}</div>
+            <small class="text-muted">Total Labs</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Exam target ───────────────────────────────────────────────── #}
+    {% if profile.target_exam_date %}
+    <div class="card card-coach p-4
+      {% if profile.days_until_exam <= 7 %}border-danger border-2
+      {% elif profile.days_until_exam <= 30 %}border-warning border-2{% endif %}">
+      <h5 class="mb-2"><i class="bi bi-calendar-check me-2"></i>Exam Date</h5>
+      <div class="text-center py-2">
+        <span class="display-5 fw-bold
+          {% if profile.days_until_exam <= 7 %}text-danger
+          {% elif profile.days_until_exam <= 30 %}text-warning
+          {% else %}text-success{% endif %}">
+          {{ profile.days_until_exam }}
+        </span>
+        <div class="text-muted">days remaining</div>
+        <small class="text-muted">{{ profile.target_exam_date|date:"F j, Y" }}</small>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Right column ─────────────────────────────────────────────────── #}
+  <div class="col-md-8">
+
+    {# Exam readiness #}
+    <div class="card card-coach p-4 mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Exam Readiness</h5>
+        <span class="badge fs-6 px-3 py-2
+          {% if profile.exam_readiness_score >= 80 %}bg-success
+          {% elif profile.exam_readiness_score >= 65 %}bg-warning text-dark
+          {% else %}bg-danger{% endif %}">
+          {{ profile.exam_readiness_score|floatformat:0 }}%
+        </span>
+      </div>
+      <div class="progress progress-coach" style="height:14px">
+        <div class="progress-bar
+          {% if profile.exam_readiness_score >= 80 %}bg-success
+          {% elif profile.exam_readiness_score >= 65 %}bg-warning
+          {% else %}bg-danger{% endif %}"
+          style="width: {{ profile.exam_readiness_score }}%">
+        </div>
+      </div>
+      <div class="d-flex justify-content-between mt-1">
+        <small class="text-muted">0%</small>
+        <small class="text-muted fw-semibold">Passing threshold: 70%</small>
+        <small class="text-muted">100%</small>
+      </div>
+    </div>
+
+    {# Domain mastery #}
+    <div class="card card-coach p-4 mb-4">
+      <h5 class="mb-3"><i class="bi bi-grid-3x3-gap me-2"></i>Domain Mastery</h5>
+      {% for dp in domain_progress %}
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <span class="fw-semibold domain-label-{{ dp.domain.order }}">
+            <i class="{{ dp.domain.icon }} me-1"></i>{{ dp.domain.title }}
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ dp.domain.weight_percent }}% of exam</span>
+            <span class="fw-bold">{{ dp.mastery }}%</span>
+          </div>
+        </div>
+        <div class="progress progress-coach">
+          <div class="progress-bar bg-domain-{{ dp.domain.order }}"
+               style="width: {{ dp.mastery }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Recent quizzes #}
+    {% if recent_quizzes %}
+    <div class="card card-coach p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Quizzes</h5>
+        <a href="{% url 'quizzes:quiz_hub' %}" class="btn btn-sm btn-outline-primary">New Quiz</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Mode</th>
+              <th>Scope</th>
+              <th>Score</th>
+              <th>Result</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for qa in recent_quizzes %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ qa.get_mode_display }}</span></td>
+              <td class="text-muted small">
+                {% if qa.topic %}{{ qa.topic.name }}
+                {% elif qa.domain %}{{ qa.domain.title|truncatechars:25 }}
+                {% else %}All domains{% endif %}
+              </td>
+              <td>
+                <span class="fw-bold
+                  {% if qa.score >= 70 %}text-success
+                  {% elif qa.score >= 50 %}text-warning
+                  {% else %}text-danger{% endif %}">
+                  {{ qa.score|floatformat:0 }}%
+                </span>
+              </td>
+              <td>
+                {% if qa.is_passed %}
+                <span class="badge bg-success"><i class="bi bi-check"></i> Pass</span>
+                {% else %}
+                <span class="badge bg-danger"><i class="bi bi-x"></i> Fail</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'quizzes:quiz_results' qa.pk %}"
+                   class="btn btn-sm btn-outline-secondary py-0 px-2">Review</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% else %}
+    <div class="card card-coach p-4 text-center text-muted">
+      <i class="bi bi-pencil-square fs-2 mb-2"></i>
+      <p class="mb-2">No quizzes taken yet.</p>
+      <a href="{% url 'quizzes:quiz_hub' %}" class="btn btn-primary btn-sm">Start a Quiz</a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

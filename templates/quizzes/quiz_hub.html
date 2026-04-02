@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}Quiz Hub — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-pencil-square me-2"></i>Quiz Hub</h1>
+    <p class="text-muted mb-0">Choose your study mode — all modes track your progress automatically.</p>
+  </div>
+</div>
+
+{# ── Four mode cards ──────────────────────────────────────────────────── #}
+<div class="row g-3 mb-5">
+
+  {# Topic quiz #}
+  <div class="col-md-6">
+    <div class="card card-coach h-100 p-4 border-start border-4 border-primary">
+      <div class="d-flex align-items-start gap-3">
+        <div class="fs-2 text-primary"><i class="bi bi-bookmark-check"></i></div>
+        <div class="flex-grow-1">
+          <h4 class="mb-1">Topic Drill</h4>
+          <p class="text-muted small mb-3">
+            Focus on one specific topic. Great for targeting a weak area
+            after lessons or flashcards.
+          </p>
+
+          <form method="get" action="#" id="topic-form">
+            <div class="mb-2">
+              {% for field in topic_form %}
+              {% if field.name == 'topic' %}
+              <select name="topic_pk" class="form-select mb-2" id="topic-select">
+                <option value="">— Choose a topic —</option>
+                {% for domain in domains %}
+                <optgroup label="{{ domain.title }}">
+                  {% for topic in topics %}
+                    {% if topic.domain == domain %}
+                    <option value="{{ topic.pk }}">
+                      {% if topic.pcep_objective %}[{{ topic.pcep_objective }}] {% endif %}{{ topic.name }}
+                    </option>
+                    {% endif %}
+                  {% endfor %}
+                </optgroup>
+                {% endfor %}
+              </select>
+              {% endif %}
+              {% endfor %}
+            </div>
+            <button type="button" class="btn btn-primary"
+                    onclick="startTopicQuiz()">
+              <i class="bi bi-play-fill me-1"></i>Start Topic Quiz
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Domain quiz #}
+  <div class="col-md-6">
+    <div class="card card-coach h-100 p-4 border-start border-4 border-success">
+      <div class="d-flex align-items-start gap-3">
+        <div class="fs-2 text-success"><i class="bi bi-grid-3x3-gap"></i></div>
+        <div class="flex-grow-1">
+          <h4 class="mb-1">Domain Drill</h4>
+          <p class="text-muted small mb-3">
+            Mix of topics from one PCEP domain. Ideal once you've worked
+            through the lessons and want broader practice.
+          </p>
+          <div class="d-grid gap-2">
+            {% for domain in domains %}
+            <a href="{% url 'quizzes:domain_quiz' domain.pk %}"
+               class="btn btn-outline-success d-flex justify-content-between align-items-center">
+              <span>
+                <span class="badge bg-domain-{{ domain.order }} me-2">{{ domain.order }}</span>
+                {{ domain.title|truncatechars:40 }}
+              </span>
+              <small class="text-muted">{{ domain.weight_percent }}%</small>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Mixed mode #}
+  <div class="col-md-6">
+    <div class="card card-coach h-100 p-4 border-start border-4 border-warning">
+      <div class="d-flex align-items-start gap-3">
+        <div class="fs-2 text-warning"><i class="bi bi-shuffle"></i></div>
+        <div class="flex-grow-1">
+          <h4 class="mb-1">Mixed Mode</h4>
+          <p class="text-muted small mb-2">
+            20 questions sampled across all 4 domains using the official
+            PCEP blueprint weights — shorter than a full exam but
+            proportionally identical.
+          </p>
+          <div class="mb-3">
+            <table class="table table-sm table-borderless mb-0" style="font-size:.8rem">
+              <tbody>
+                {% for domain in domains %}
+                <tr>
+                  <td><span class="badge bg-domain-{{ domain.order }}">D{{ domain.order }}</span></td>
+                  <td class="text-muted">{{ domain.title|truncatechars:32 }}</td>
+                  <td class="text-end fw-semibold">{{ domain.weight_percent }}%</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <a href="{% url 'quizzes:mixed_quiz' %}" class="btn btn-warning">
+            <i class="bi bi-play-fill me-1"></i>Start Mixed Quiz (20 Qs)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Exam mode #}
+  <div class="col-md-6">
+    <div class="card card-coach h-100 p-4 border-start border-4 border-danger">
+      <div class="d-flex align-items-start gap-3">
+        <div class="fs-2 text-danger"><i class="bi bi-clock-history"></i></div>
+        <div class="flex-grow-1">
+          <h4 class="mb-1">Full Exam Mode</h4>
+          <p class="text-muted small mb-2">
+            Simulate the real PCEP-30-02 exam: 40 questions, 45-minute
+            timer, weighted by the official blueprint.  Score ≥ 70% to pass.
+          </p>
+          <div class="alert alert-danger py-2 px-3 small mb-3">
+            <i class="bi bi-alarm me-1"></i>
+            <strong>45-minute timer</strong> — the quiz auto-submits when time runs out.
+          </div>
+          <a href="{% url 'quizzes:exam_mode' %}" class="btn btn-danger">
+            <i class="bi bi-play-fill me-1"></i>Start Exam Mode (40 Qs)
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Recent attempts ───────────────────────────────────────────────────── #}
+{% if recent_attempts %}
+<h4 class="mb-3"><i class="bi bi-clock-history me-2"></i>Recent Attempts</h4>
+<div class="card card-coach">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Mode</th>
+          <th>Scope</th>
+          <th>Score</th>
+          <th>Result</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in recent_attempts %}
+        <tr>
+          <td><span class="badge bg-secondary">{{ a.get_mode_display }}</span></td>
+          <td class="text-muted small">
+            {% if a.topic %}{{ a.topic.name }}
+            {% elif a.domain %}{{ a.domain.title|truncatechars:30 }}
+            {% else %}All domains{% endif %}
+          </td>
+          <td>
+            <span class="fw-semibold
+              {% if a.score >= 70 %}text-success
+              {% elif a.score >= 50 %}text-warning
+              {% else %}text-danger{% endif %}">
+              {{ a.score|floatformat:0 }}%
+            </span>
+          </td>
+          <td>
+            {% if a.is_passed %}
+            <span class="badge bg-success"><i class="bi bi-check me-1"></i>Passed</span>
+            {% else %}
+            <span class="badge bg-danger"><i class="bi bi-x me-1"></i>Failed</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'quizzes:quiz_results' a.pk %}"
+               class="btn btn-sm btn-outline-secondary">Review</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── Quick-action cards ─────────────────────────────────────────────────── #}
+<div class="row g-3 mt-2">
+  <div class="col-md-4">
+    <a href="{% url 'quizzes:review_mistakes' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-eye fs-3 text-danger"></i>
+        <div>
+          <div class="fw-semibold">Browse Mistakes</div>
+          <small class="text-muted">See questions you've never got right</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'quizzes:review_quiz' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-arrow-repeat fs-3 text-warning"></i>
+        <div>
+          <div class="fw-semibold">Practice Mistakes</div>
+          <small class="text-muted">Interactive quiz of weak questions</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'progress:dashboard' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-speedometer2 fs-3 text-primary"></i>
+        <div>
+          <div class="fw-semibold">Dashboard</div>
+          <small class="text-muted">Full progress overview & readiness</small>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function startTopicQuiz() {
+  const sel = document.getElementById('topic-select');
+  const pk  = sel.value;
+  if (!pk) { alert('Please choose a topic first.'); return; }
+  window.location.href = '/quiz/topic/' + pk + '/';
+}
+</script>
+{% endblock %}

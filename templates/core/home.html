@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}PCEP Prep Coach — Pass Your Python Certification{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="hero text-center mb-5">
+  <h1 class="display-5 fw-bold mb-3"><i class="bi bi-trophy me-2"></i>PCEP Prep Coach</h1>
+  <p class="lead mb-4">Your personal study partner for the <strong>PCEP-30-02</strong> Certified Entry-Level Python Programmer exam.</p>
+  <div class="d-flex justify-content-center gap-3 flex-wrap">
+    {% if user.is_authenticated %}
+    <a href="{% url 'progress:dashboard' %}" class="btn btn-light btn-lg"><i class="bi bi-speedometer2 me-1"></i>My Dashboard</a>
+    <a href="{% url 'learning:domain_list' %}" class="btn btn-outline-light btn-lg"><i class="bi bi-book me-1"></i>Start Learning</a>
+    {% else %}
+    <a href="{% url 'accounts:register' %}" class="btn btn-light btn-lg"><i class="bi bi-rocket-takeoff me-1"></i>Get Started Free</a>
+    <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-lg">Login</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Exam Domains Overview -->
+<h2 class="text-center mb-4">4 Exam Domains, 1 Clear Path</h2>
+<div class="row g-4 mb-5">
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-coach domain-1 h-100 p-3">
+      <div class="card-body text-center">
+        <div class="fs-1 text-primary mb-2"><i class="bi bi-cpu"></i></div>
+        <h5 class="card-title">Fundamentals</h5>
+        <span class="badge bg-primary">18%</span>
+        <p class="card-text mt-2 small text-muted">Python basics, data types, operators, I/O</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-coach domain-2 h-100 p-3">
+      <div class="card-body text-center">
+        <div class="fs-1 text-success mb-2"><i class="bi bi-arrow-repeat"></i></div>
+        <h5 class="card-title">Control Flow</h5>
+        <span class="badge bg-success">29%</span>
+        <p class="card-text mt-2 small text-muted">Conditionals, loops, break, continue, pass</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-coach domain-3 h-100 p-3">
+      <div class="card-body text-center">
+        <div class="fs-1 text-warning mb-2"><i class="bi bi-collection"></i></div>
+        <h5 class="card-title">Data Collections</h5>
+        <span class="badge bg-warning text-dark">25%</span>
+        <p class="card-text mt-2 small text-muted">Lists, tuples, dicts, strings, slicing</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 col-lg-3">
+    <div class="card card-coach domain-4 h-100 p-3">
+      <div class="card-body text-center">
+        <div class="fs-1 text-danger mb-2"><i class="bi bi-gear"></i></div>
+        <h5 class="card-title">Functions &amp; Exceptions</h5>
+        <span class="badge bg-danger">28%</span>
+        <p class="card-text mt-2 small text-muted">Functions, scope, recursion, try/except</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<h2 class="text-center mb-4">How It Works</h2>
+<div class="row g-4 mb-5">
+  <div class="col-md-4">
+    <div class="card card-coach h-100 p-4 text-center">
+      <i class="bi bi-book fs-1 text-primary mb-2"></i>
+      <h5>Learn</h5>
+      <p class="text-muted small">Read clear explanations with beginner examples for every PCEP topic.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-coach h-100 p-4 text-center">
+      <i class="bi bi-pencil-square fs-1 text-primary mb-2"></i>
+      <h5>Practice</h5>
+      <p class="text-muted small">Flashcards, quizzes, coding labs, and full exam simulations.</p>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card card-coach h-100 p-4 text-center">
+      <i class="bi bi-graph-up fs-1 text-primary mb-2"></i>
+      <h5>Track</h5>
+      <p class="text-muted small">Smart dashboard shows your weak areas and recommends what to study next.</p>
+    </div>
+  </div>
+</div>
+
+{% if not user.is_authenticated %}
+<div class="text-center mb-5">
+  <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff me-1"></i>Start Your PCEP Journey</a>
+</div>
+{% endif %}
+{% endblock %}

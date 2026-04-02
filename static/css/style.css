@@ -1,0 +1,308 @@
+/* PCEP Prep Coach — custom styles */
+
+:root {
+  --coach-primary: #4361ee;
+  --coach-success: #2ec4b6;
+  --coach-warning: #ff9f1c;
+  --coach-danger: #e71d36;
+  --coach-bg: #f8f9fa;
+}
+
+body {
+  background-color: var(--coach-bg);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+.card-coach {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.card-coach:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.1);
+}
+
+/* ── Progress bars ─────────────────────────────────────────────────── */
+.progress-coach {
+  height: 12px;
+  border-radius: 6px;
+  background: #e9ecef;
+}
+.progress-coach .progress-bar {
+  border-radius: 6px;
+}
+
+/* ── Domain colours ────────────────────────────────────────────────── */
+.domain-1 { border-left: 5px solid #4361ee; }
+.domain-2 { border-left: 5px solid #2ec4b6; }
+.domain-3 { border-left: 5px solid #ff9f1c; }
+.domain-4 { border-left: 5px solid #e71d36; }
+.bg-domain-1 { background-color: #4361ee !important; }
+.bg-domain-2 { background-color: #2ec4b6 !important; }
+.bg-domain-3 { background-color: #ff9f1c !important; }
+.bg-domain-4 { background-color: #e71d36 !important; }
+
+/* ── Streak badge ──────────────────────────────────────────────────── */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .35rem .75rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ff9f1c, #e71d36);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Flashcard ─────────────────────────────────────────────────────── */
+.flashcard {
+  perspective: 800px;
+  cursor: pointer;
+  min-height: 220px;
+}
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  text-align: center;
+  transition: transform .5s;
+  transform-style: preserve-3d;
+}
+.flashcard.flipped .flashcard-inner {
+  transform: rotateY(180deg);
+}
+.flashcard-front, .flashcard-back {
+  position: absolute;
+  width: 100%;
+  min-height: 220px;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border-radius: 12px;
+}
+.flashcard-front {
+  background: #fff;
+  border: 2px solid #4361ee;
+}
+.flashcard-back {
+  background: #4361ee;
+  color: #fff;
+  transform: rotateY(180deg);
+}
+
+/* ── Code editor textarea ──────────────────────────────────────────── */
+.code-editor {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: .9rem;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border: none;
+  border-radius: 8px;
+  padding: 1rem;
+  resize: vertical;
+  min-height: 200px;
+  tab-size: 4;
+}
+
+/* ── Quiz option ───────────────────────────────────────────────────── */
+.quiz-option {
+  border: 2px solid #dee2e6;
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.quiz-option:hover, .quiz-option.selected {
+  border-color: var(--coach-primary);
+  background: rgba(67,97,238,.05);
+}
+
+/* ── Hero section ──────────────────────────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+  color: #fff;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+}
+
+/* ── Heatmap squares ───────────────────────────────────────────────── */
+.heatmap-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* ── Domain label colours (text) ───────────────────────────────────── */
+.domain-label-1 { color: #4361ee; }
+.domain-label-2 { color: #2ec4b6; }
+.domain-label-3 { color: #ff9f1c; }
+.domain-label-4 { color: #e71d36; }
+
+/* ── Readiness ring ────────────────────────────────────────────────── */
+.readiness-ring {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 6px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.readiness-ring.readiness-high  { border-color: #198754; }
+.readiness-ring.readiness-mid   { border-color: #ffc107; }
+.readiness-ring.readiness-low   { border-color: #dc3545; }
+.readiness-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* ── Status badges ─────────────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: .2em .6em;
+  border-radius: 20px;
+  font-size: .75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status-not_started { background: #e9ecef; color: #6c757d; }
+.status-learning    { background: #cfe2ff; color: #0a58ca; }
+.status-practicing  { background: #fff3cd; color: #997404; }
+.status-mastered    { background: #d1e7dd; color: #0f5132; }
+
+/* ── Activity timeline ─────────────────────────────────────────────── */
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+}
+.activity-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.activity-body {
+  flex: 1;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+.activity-item:last-child .activity-body { border-bottom: none; }
+
+/* ── Heatmap card (topic grid) ─────────────────────────────────────── */
+.heatmap-card { transition: transform .15s ease; }
+.heatmap-card:hover { transform: translateY(-2px); }
+.heatmap-cell {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* ── Difficulty badge colours ───────────────────────────────────────── */
+.bg-easy   { background-color: #198754 !important; color: #fff !important; }
+.bg-medium { background-color: #fd7e14 !important; color: #fff !important; }
+.bg-hard   { background-color: #dc3545 !important; color: #fff !important; }
+
+/* ── Lesson content typography ─────────────────────────────────────── */
+.lesson-content {
+  line-height: 1.75;
+  font-size: 1rem;
+}
+.lesson-content h2,
+.lesson-content h3,
+.lesson-content h4 {
+  margin-top: 1.75rem;
+  margin-bottom: .75rem;
+  font-weight: 600;
+}
+.lesson-content p { margin-bottom: 1rem; }
+.lesson-content pre {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  font-size: .88rem;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+.lesson-content code {
+  background: #f0f0f5;
+  color: #c0392b;
+  border-radius: 4px;
+  padding: .1em .4em;
+  font-size: .9em;
+}
+.lesson-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+.lesson-content ul, .lesson-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+.lesson-content li { margin-bottom: .3rem; }
+.lesson-content blockquote {
+  border-left: 4px solid var(--coach-primary);
+  padding-left: 1rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+.lesson-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.lesson-content th, .lesson-content td {
+  border: 1px solid #dee2e6;
+  padding: .5rem .75rem;
+  text-align: left;
+}
+.lesson-content th { background: #f8f9fa; font-weight: 600; }
+
+/* ── Flashcard keyboard hint ───────────────────────────────────────── */
+.kbd-hint {
+  font-size: .72rem;
+  color: #adb5bd;
+  letter-spacing: .02em;
+}
+.kbd-hint kbd {
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  padding: .1em .35em;
+  font-size: .85em;
+  color: #495057;
+}
+
+/* ── Flashcard known/unknown buttons ───────────────────────────────── */
+.fc-known   { min-width: 100px; }
+.fc-unknown { min-width: 100px; }
+
+/* ── Challenge list difficulty filter pills ────────────────────────── */
+.filter-pill.active { font-weight: 600; }
+
+/* ── Mobile adjustments ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero { padding: 2rem 1rem; }
+  .flashcard-front, .flashcard-back { padding: 1rem; min-height: 160px; }
+  .readiness-ring { width: 64px; height: 64px; }
+  .readiness-value { font-size: .9rem; }
+}

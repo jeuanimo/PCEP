@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Flashcards — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-card-text me-2"></i>Flashcard Decks</h1>
+    <p class="text-muted mb-0">Browse by domain and topic. Rate each card Easy / Medium / Hard to track what you know.</p>
+  </div>
+  {% if total_cards %}
+  <div class="text-end">
+    <div class="fw-semibold">{{ total_rated }} / {{ total_cards }} rated</div>
+    <div class="progress progress-coach mt-1" style="width:140px;height:6px">
+      <div class="progress-bar bg-primary"
+           style="width:{% widthratio total_rated total_cards 100 %}%"></div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# Rating legend #}
+<div class="d-flex gap-3 mb-4 flex-wrap align-items-center">
+  <small class="text-muted fw-semibold text-uppercase">Rating key:</small>
+  <span class="badge bg-success px-3">Easy — know it cold</span>
+  <span class="badge bg-warning text-dark px-3">Medium — needs more practice</span>
+  <span class="badge bg-danger px-3">Hard — struggled with this</span>
+  <span class="badge bg-secondary px-3">Unrated</span>
+</div>
+
+{% if not domains %}
+<div class="card card-coach p-5 text-center text-muted">
+  <i class="bi bi-card-text fs-1 mb-3"></i>
+  <h4>No flashcard decks yet</h4>
+  <p>Complete some lessons and flashcards will appear here.</p>
+  <a href="{% url 'learning:domain_list' %}" class="btn btn-primary mt-2">Browse Lessons</a>
+</div>
+{% endif %}
+
+{% for dg in domains %}
+<div class="mb-5">
+  {# Domain header #}
+  <div class="d-flex align-items-center gap-3 mb-3 pb-2 border-bottom border-2 domain-{{ dg.domain.order }}" style="border-color:inherit">
+    <span class="badge bg-domain-{{ dg.domain.order }} fs-6 px-3">D{{ dg.domain.order }}</span>
+    <h4 class="mb-0 domain-label-{{ dg.domain.order }}">
+      <i class="{{ dg.domain.icon }} me-1"></i>{{ dg.domain.title }}
+    </h4>
+    <small class="text-muted ms-auto">{{ dg.domain.weight_percent }}% of exam</small>
+  </div>
+
+  <div class="row g-3">
+    {% for row in dg.topics %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card card-coach h-100 p-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="mb-0 fw-semibold">{{ row.topic.name }}</h6>
+          <span class="badge bg-secondary ms-2 flex-shrink-0">{{ row.card_count }} cards</span>
+        </div>
+
+        {% if row.topic.pcep_objective %}
+        <small class="text-muted mb-2">{{ row.topic.pcep_objective }}</small>
+        {% endif %}
+
+        {# Rating breakdown mini-bar #}
+        {% if row.rated_count > 0 %}
+        <div class="d-flex gap-1 mb-2" style="height:6px;border-radius:3px;overflow:hidden">
+          {% if row.easy_count %}
+          <div class="bg-success flex-shrink-0"
+               style="width:{% widthratio row.easy_count row.card_count 100 %}%;min-width:2px"></div>
+          {% endif %}
+          {% if row.medium_count %}
+          <div class="bg-warning flex-shrink-0"
+               style="width:{% widthratio row.medium_count row.card_count 100 %}%;min-width:2px"></div>
+          {% endif %}
+          {% if row.hard_count %}
+          <div class="bg-danger flex-shrink-0"
+               style="width:{% widthratio row.hard_count row.card_count 100 %}%;min-width:2px"></div>
+          {% endif %}
+          {% if row.unrated_count %}
+          <div class="bg-secondary bg-opacity-25 flex-grow-1"></div>
+          {% endif %}
+        </div>
+        <div class="d-flex gap-2 mb-3 flex-wrap" style="font-size:.75rem">
+          {% if row.easy_count %}
+          <span class="text-success fw-semibold">{{ row.easy_count }} easy</span>
+          {% endif %}
+          {% if row.medium_count %}
+          <span class="text-warning fw-semibold">{{ row.medium_count }} medium</span>
+          {% endif %}
+          {% if row.hard_count %}
+          <span class="text-danger fw-semibold">{{ row.hard_count }} hard</span>
+          {% endif %}
+          {% if row.unrated_count %}
+          <span class="text-muted">{{ row.unrated_count }} unrated</span>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-muted small mb-3">Not studied yet</p>
+        {% endif %}
+
+        <div class="d-flex gap-2 mt-auto">
+          <a href="{% url 'learning:flashcards' row.topic.pk %}"
+             class="btn btn-primary btn-sm flex-grow-1">
+            <i class="bi bi-play-fill me-1"></i>
+            {% if row.rated_count == 0 %}Start{% elif row.hard_count > 0 %}Review Hard{% else %}Study{% endif %}
+          </a>
+          {% if row.hard_count > 0 %}
+          <a href="{% url 'learning:flashcards' row.topic.pk %}?filter=hard"
+             class="btn btn-danger btn-sm" title="Drill only hard-rated cards">
+            <i class="bi bi-exclamation-triangle"></i> {{ row.hard_count }}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

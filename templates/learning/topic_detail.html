@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ topic.name }} — PCEP Prep Coach{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'learning:domain_list' %}">Domains</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'learning:domain_detail' topic.domain.slug %}">{{ topic.domain.title }}</a></li>
+    <li class="breadcrumb-item active">{{ topic.name }}</li>
+  </ol>
+</nav>
+
+<h1 class="mb-2">{{ topic.name }}</h1>
+<p class="text-muted">{{ topic.description }}</p>
+
+{% if progress %}
+<div class="card card-coach p-3 mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <strong>Your progress:</strong>
+    <div class="progress progress-coach flex-grow-1">
+      <div class="progress-bar bg-success" style="width: {{ progress.confidence }}%">{{ progress.confidence }}%</div>
+    </div>
+    <span class="badge bg-secondary">{{ progress.get_status_display }}</span>
+  </div>
+</div>
+{% endif %}
+
+<!-- Study modes -->
+<div class="row g-3 mb-4">
+  {% if lessons %}
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'learning:lesson_detail' lessons.0.pk %}" class="text-decoration-none">
+      <div class="card card-coach p-3 text-center h-100">
+        <i class="bi bi-book fs-2 text-primary mb-1"></i>
+        <h6>Learn</h6>
+        <small class="text-muted">{{ lessons|length }} lesson{{ lessons|length|pluralize }}</small>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if flashcard_count %}
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'learning:flashcards' topic.pk %}" class="text-decoration-none">
+      <div class="card card-coach p-3 text-center h-100">
+        <i class="bi bi-card-text fs-2 text-success mb-1"></i>
+        <h6>Flashcards</h6>
+        <small class="text-muted">{{ flashcard_count }} card{{ flashcard_count|pluralize }}</small>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if quiz_count %}
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'quizzes:topic_quiz' topic.pk %}" class="text-decoration-none">
+      <div class="card card-coach p-3 text-center h-100">
+        <i class="bi bi-pencil-square fs-2 text-warning mb-1"></i>
+        <h6>Quiz</h6>
+        <small class="text-muted">{{ quiz_count }} question{{ quiz_count|pluralize }}</small>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+  {% if lab_count %}
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'labs:challenge_list' %}" class="text-decoration-none">
+      <div class="card card-coach p-3 text-center h-100">
+        <i class="bi bi-terminal fs-2 text-danger mb-1"></i>
+        <h6>Code Labs</h6>
+        <small class="text-muted">{{ lab_count }} challenge{{ lab_count|pluralize }}</small>
+      </div>
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Lesson list -->
+{% if lessons %}
+<h4 class="mt-4 mb-3">Lessons</h4>
+<div class="list-group">
+  {% for lesson in lessons %}
+  <a href="{% url 'learning:lesson_detail' lesson.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+    <div>
+      <i class="bi bi-journal-text me-2 text-primary"></i>{{ lesson.title }}
+    </div>
+    <i class="bi bi-chevron-right"></i>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

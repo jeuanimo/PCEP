@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Review Mistakes — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-eye me-2"></i>Review Mistakes</h1>
+    <p class="text-muted mb-0">
+      Questions you've never gotten right, grouped by topic.
+      Study the pattern, not just the answer.
+    </p>
+  </div>
+  {% if missed_count > 0 %}
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <span class="badge bg-danger fs-6 px-3 py-2">{{ missed_count }} to fix</span>
+    <a href="{% url 'quizzes:review_quiz' %}" class="btn btn-danger">
+      <i class="bi bi-arrow-repeat me-1"></i>Practice All
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% if grouped %}
+
+{# ── Domain sections ──────────────────────────────────────────────────── #}
+{% for dg in grouped %}
+<section class="mb-5">
+
+  {# Domain header #}
+  <div class="d-flex align-items-center gap-3 mb-3 pb-2 border-bottom border-2">
+    <span class="badge bg-domain-{{ dg.domain.order }} fs-6 px-3">D{{ dg.domain.order }}</span>
+    <h3 class="mb-0 domain-label-{{ dg.domain.order }}">
+      <i class="{{ dg.domain.icon }} me-1"></i>{{ dg.domain.title }}
+    </h3>
+    <small class="text-muted ms-auto">{{ dg.domain.weight_percent }}% of exam</small>
+  </div>
+
+  {# Topic groups #}
+  {% for tg in dg.topics %}
+  <div class="mb-4">
+
+    {# Topic sub-header #}
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="mb-0">{{ tg.topic.name }}</h5>
+        <span class="badge bg-danger-subtle text-danger">
+          {{ tg.miss_count }} missed
+        </span>
+        {% if tg.topic.pcep_objective %}
+        <small class="text-muted">{{ tg.topic.pcep_objective }}</small>
+        {% endif %}
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{% url 'learning:topic_detail' tg.topic.pk %}"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-book me-1"></i>Lessons
+        </a>
+        <a href="{% url 'learning:flashcards' tg.topic.pk %}"
+           class="btn btn-sm btn-outline-success">
+          <i class="bi bi-card-text me-1"></i>Flashcards
+        </a>
+        <a href="{% url 'quizzes:topic_quiz' tg.topic.pk %}"
+           class="btn btn-sm btn-primary">
+          <i class="bi bi-pencil-square me-1"></i>Quiz This Topic
+        </a>
+      </div>
+    </div>
+
+    {# Question cards #}
+    {% for ua in tg.answers %}
+    <div class="card mb-2 border-start border-4 border-danger p-3">
+
+      {# Question meta #}
+      <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+        <span class="badge bg-secondary small">{{ ua.question.get_question_type_display }}</span>
+        <span class="badge bg-secondary small">{{ ua.question.get_difficulty_display }}</span>
+        <small class="text-muted">{{ ua.answered_at|timesince }} ago</small>
+      </div>
+
+      {# Question text #}
+      <h6 class="mb-2 fw-semibold">{{ ua.question.text }}</h6>
+
+      {% if ua.question.code_snippet %}
+      <pre class="bg-dark text-light p-2 rounded small mb-2"
+           style="font-size:.82rem;overflow-x:auto"><code>{{ ua.question.code_snippet }}</code></pre>
+      {% endif %}
+
+      {# What the user answered #}
+      {% if ua.selected_choices.exists %}
+      <div class="small text-danger mb-2">
+        <i class="bi bi-cursor me-1"></i>You answered:
+        {% for c in ua.selected_choices.all %}
+          <span class="text-danger">{{ c.text }}{% if not forloop.last %}, {% endif %}</span>
+        {% endfor %}
+      </div>
+      {% elif ua.text_answer %}
+      <div class="small text-danger mb-2">
+        <i class="bi bi-cursor me-1"></i>You answered: <span class="text-danger">{{ ua.text_answer }}</span>
+      </div>
+      {% endif %}
+
+      {# Reveal answer — collapsed by default #}
+      <button class="btn btn-sm btn-outline-success mb-1 align-self-start"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#answer-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+        <i class="bi bi-eye me-1"></i>Show Correct Answer
+      </button>
+
+      <div class="collapse"
+           id="answer-{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+        <div class="border-start border-2 border-success ps-3 mt-2">
+          <strong class="text-success small">Correct answer:</strong>
+          {% for c in ua.question.choices.all %}
+            {% if c.is_correct %}
+            <div class="text-success fw-semibold small">{{ c.text }}</div>
+            {% endif %}
+          {% endfor %}
+          {% if ua.question.explanation %}
+          <div class="mt-2 p-2 bg-light rounded">
+            <small>
+              <i class="bi bi-lightbulb me-1 text-warning"></i>
+              <strong>Explanation:</strong> {{ ua.question.explanation }}
+            </small>
+          </div>
+          {% endif %}
+          {% if ua.question.hint %}
+          <div class="mt-1">
+            <small class="text-muted">
+              <i class="bi bi-lightbulb me-1"></i>Hint: {{ ua.question.hint }}
+            </small>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+    {% endfor %}{# /answers #}
+
+  </div>
+  {% endfor %}{# /topic_groups #}
+
+</section>
+{% endfor %}{# /domain_groups #}
+
+{# ── Footer actions ───────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-center gap-2 mt-4 flex-wrap">
+  <a href="{% url 'quizzes:review_quiz' %}" class="btn btn-danger btn-lg">
+    <i class="bi bi-arrow-repeat me-1"></i>Practice All {{ missed_count }} Missed
+  </a>
+  <a href="{% url 'progress:dashboard' %}" class="btn btn-outline-secondary btn-lg">
+    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+  </a>
+</div>
+
+{% else %}
+<div class="card card-coach p-5 text-center">
+  <div class="fs-1 text-success mb-3"><i class="bi bi-emoji-sunglasses"></i></div>
+  <h3>Nothing to Review!</h3>
+  <p class="text-muted">You've answered every question correctly at least once. Impressive!</p>
+  <div class="d-flex justify-content-center gap-2 mt-2">
+    <a href="{% url 'quizzes:exam_mode' %}" class="btn btn-primary">
+      <i class="bi bi-clock me-1"></i>Take a Practice Exam
+    </a>
+    <a href="{% url 'progress:dashboard' %}" class="btn btn-outline-secondary">Dashboard</a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

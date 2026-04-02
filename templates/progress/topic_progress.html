@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+{% block title %}{{ topic.name }} Progress — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+
+{# Breadcrumb #}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'progress:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item">
+      <a href="{% url 'learning:domain_detail' topic.domain.slug %}">{{ topic.domain.title }}</a>
+    </li>
+    <li class="breadcrumb-item active">{{ topic.name }}</li>
+  </ol>
+</nav>
+
+{# Topic header #}
+<div class="card card-coach p-4 mb-4 domain-{{ topic.domain.order }}">
+  <div class="row align-items-center">
+    <div class="col-md-8">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <span class="badge bg-domain-{{ topic.domain.order }}">Domain {{ topic.domain.order }}</span>
+        {% if topic.pcep_objective %}
+        <span class="badge bg-secondary">{{ topic.pcep_objective }}</span>
+        {% endif %}
+        <span class="badge bg-secondary">{{ topic.get_difficulty_display }}</span>
+      </div>
+      <h2 class="mb-1">{{ topic.name }}</h2>
+      {% if topic.description %}
+      <p class="text-muted mb-0">{{ topic.description }}</p>
+      {% endif %}
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <div class="confidence-display">
+        <span class="display-4 fw-bold
+          {% if progress.confidence >= 80 %}text-success
+          {% elif progress.confidence >= 50 %}text-warning
+          {% else %}text-danger{% endif %}">
+          {{ progress.confidence }}%
+        </span>
+        <div>
+          <span class="status-badge status-{{ progress.status }} fs-6">
+            {{ progress.get_status_display }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Stats row #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card card-coach p-3 text-center">
+      <h3 class="text-success mb-0">{{ progress.correct_count }}</h3>
+      <small class="text-muted">Correct</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-coach p-3 text-center">
+      <h3 class="text-danger mb-0">{{ progress.incorrect_count }}</h3>
+      <small class="text-muted">Incorrect</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-coach p-3 text-center">
+      <h3 class="mb-0">{{ progress.total_attempts }}</h3>
+      <small class="text-muted">Total Attempts</small>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card card-coach p-3 text-center">
+      {% if progress.accuracy is not None %}
+      <h3 class="mb-0">{{ progress.accuracy }}%</h3>
+      {% else %}
+      <h3 class="text-muted mb-0">—</h3>
+      {% endif %}
+      <small class="text-muted">Accuracy</small>
+    </div>
+  </div>
+</div>
+
+{# Confidence bar #}
+<div class="card card-coach p-4 mb-4">
+  <div class="d-flex justify-content-between mb-2">
+    <span class="fw-semibold">Mastery Progress</span>
+    <span>{{ progress.confidence }}/100</span>
+  </div>
+  <div class="progress progress-coach" style="height:18px">
+    <div class="progress-bar
+      {% if progress.confidence >= 80 %}bg-success
+      {% elif progress.confidence >= 50 %}bg-warning
+      {% else %}bg-danger{% endif %}"
+      style="width:{{ progress.confidence }}%"
+      role="progressbar">
+      {{ progress.confidence }}%
+    </div>
+  </div>
+  <div class="d-flex justify-content-between mt-2 text-muted small">
+    <span>0 — Not Started</span>
+    <span class="text-warning">40 — Practicing</span>
+    <span class="text-success">80 — Mastered</span>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+
+    {# Recent quiz answers #}
+    <div class="card card-coach p-4 mb-4">
+      <h5 class="mb-3"><i class="bi bi-clock-history me-2"></i>Recent Quiz Answers</h5>
+      {% if recent_answers %}
+      <div class="list-group list-group-flush">
+        {% for ua in recent_answers %}
+        <div class="list-group-item px-0 border-start border-4
+          {% if ua.is_correct %}border-success{% else %}border-danger{% endif %}">
+          <div class="d-flex justify-content-between align-items-start gap-2 ps-3">
+            <div class="flex-grow-1">
+              <p class="mb-1 small fw-semibold">{{ ua.question.text|truncatewords:18 }}</p>
+              {% if ua.question.code_snippet %}
+              <code class="small text-muted">{{ ua.question.code_snippet|truncatechars:60 }}</code>
+              {% endif %}
+              {% if not ua.is_correct %}
+              <div class="mt-1 small text-success">
+                <i class="bi bi-check-circle me-1"></i>Correct:
+                {% for c in ua.question.choices.all %}{% if c.is_correct %}<strong>{{ c.text }}</strong>{% endif %}{% endfor %}
+              </div>
+              {% if ua.question.explanation %}
+              <div class="mt-1 small text-muted fst-italic">{{ ua.question.explanation|truncatewords:20 }}</div>
+              {% endif %}
+              {% endif %}
+            </div>
+            <div class="text-end text-nowrap">
+              {% if ua.is_correct %}
+              <span class="badge bg-success"><i class="bi bi-check"></i></span>
+              {% else %}
+              <span class="badge bg-danger"><i class="bi bi-x"></i></span>
+              {% endif %}
+              <div class="text-muted" style="font-size:.7rem">{{ ua.answered_at|timesince }} ago</div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted mb-0">
+        No quiz history for this topic yet.
+        <a href="{% url 'quizzes:topic_quiz' topic.pk %}">Take a quiz</a> to start tracking.
+      </p>
+      {% endif %}
+    </div>
+
+    {# Coding labs #}
+    {% if labs %}
+    <div class="card card-coach p-4">
+      <h5 class="mb-3"><i class="bi bi-terminal me-2"></i>Coding Labs</h5>
+      <div class="list-group list-group-flush">
+        {% for lab in labs %}
+        <a href="{% url 'labs:challenge_detail' lab.pk %}"
+           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+          <div>
+            <span class="fw-semibold">{{ lab.title }}</span>
+            <span class="badge bg-secondary ms-2">{{ lab.get_difficulty_display }}</span>
+          </div>
+          {% if lab.pk in completed_lab_ids %}
+          <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Solved</span>
+          {% else %}
+          <span class="badge bg-outline-secondary text-muted">Try it →</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="col-lg-4">
+    {# Quick actions #}
+    <div class="card card-coach p-4 mb-4">
+      <h5 class="mb-3"><i class="bi bi-lightning-fill me-2"></i>Study This Topic</h5>
+      <div class="d-grid gap-2">
+        <a href="{% url 'learning:topic_detail' topic.pk %}" class="btn btn-outline-primary">
+          <i class="bi bi-book me-1"></i>Lessons & Flashcards
+        </a>
+        {% if has_questions %}
+        <a href="{% url 'quizzes:topic_quiz' topic.pk %}" class="btn btn-primary">
+          <i class="bi bi-pencil-square me-1"></i>Quiz This Topic
+        </a>
+        {% endif %}
+        {% if labs %}
+        <a href="{% url 'labs:challenge_list' %}" class="btn btn-outline-success">
+          <i class="bi bi-terminal me-1"></i>Code Labs
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Status explanation #}
+    <div class="card card-coach p-4">
+      <h6 class="mb-3 text-muted text-uppercase fw-semibold" style="font-size:.75rem">Status Thresholds</h6>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="status-badge status-not_started">Not Started</span>
+        <small class="text-muted">— no attempts</small>
+      </div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="status-badge status-learning">Learning</span>
+        <small class="text-muted">— confidence 1–39</small>
+      </div>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="status-badge status-practicing">Practicing</span>
+        <small class="text-muted">— confidence 40–79</small>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="status-badge status-mastered">Mastered</span>
+        <small class="text-muted">— confidence 80+</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

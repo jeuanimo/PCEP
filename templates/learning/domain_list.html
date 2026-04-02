@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Learning Paths — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-book me-2"></i>PCEP Exam Domains</h1>
+    <p class="lead text-muted mb-0">Four domains, one clear path to certification.</p>
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for domain in domains %}
+  <div class="col-md-6">
+    <div class="card card-coach domain-{{ domain.order }} h-100 p-4">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="fs-2 domain-label-{{ domain.order }}">
+            <i class="{{ domain.icon }}"></i>
+          </div>
+          <div>
+            <h4 class="mb-0">{{ domain.title }}</h4>
+            <p class="text-muted small mb-0 mt-1">{{ domain.description|truncatewords:15 }}</p>
+          </div>
+        </div>
+        <span class="badge bg-domain-{{ domain.order }} fs-6 flex-shrink-0">{{ domain.weight_percent }}%</span>
+      </div>
+
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <span class="badge bg-secondary">
+          <i class="bi bi-book me-1"></i>{{ domain.topics.count }} topics
+        </span>
+        <span class="text-muted small align-self-center">{{ domain.weight_percent }}% of PCEP exam</span>
+      </div>
+
+      <div class="d-flex gap-2 mt-auto flex-wrap">
+        <a href="{% url 'learning:domain_detail' domain.slug %}"
+           class="btn btn-outline-secondary btn-sm flex-grow-1">
+          <i class="bi bi-eye me-1"></i>Browse Topics
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'quizzes:domain_quiz' domain.pk %}"
+           class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-pencil-square me-1"></i>Quiz
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if user.is_authenticated %}
+<div class="row g-3 mt-2">
+  <div class="col-md-4">
+    <a href="{% url 'quizzes:mixed_quiz' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-shuffle fs-3 text-warning"></i>
+        <div>
+          <div class="fw-semibold">Mixed Quiz</div>
+          <small class="text-muted">20 Qs across all domains</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'quizzes:exam_mode' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-clock-history fs-3 text-danger"></i>
+        <div>
+          <div class="fw-semibold">Full Exam Mode</div>
+          <small class="text-muted">40 Qs, 45-minute timer</small>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'progress:dashboard' %}" class="card card-coach p-3 text-decoration-none text-dark heatmap-card">
+      <div class="d-flex align-items-center gap-3">
+        <i class="bi bi-speedometer2 fs-3 text-primary"></i>
+        <div>
+          <div class="fw-semibold">Dashboard</div>
+          <small class="text-muted">Your progress overview</small>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

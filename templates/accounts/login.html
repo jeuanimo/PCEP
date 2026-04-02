@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Login — PCEP Prep Coach{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card card-coach p-4">
+      <h2 class="text-center mb-4"><i class="bi bi-box-arrow-in-right me-2"></i>Login</h2>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        </div>
+        {% endif %}
+        <div class="mb-3">
+          <label for="id_username" class="form-label">Username</label>
+          <input type="text" name="username" id="id_username"
+                 class="form-control {% if form.username.errors %}is-invalid{% endif %}" required autofocus>
+          {% for err in form.username.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+        </div>
+        <div class="mb-3">
+          <label for="id_password" class="form-label">Password</label>
+          <input type="password" name="password" id="id_password"
+                 class="form-control {% if form.password.errors %}is-invalid{% endif %}" required>
+          {% for err in form.password.errors %}<div class="invalid-feedback">{{ err }}</div>{% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary w-100 btn-lg">Login</button>
+      </form>
+      <p class="text-center mt-3 mb-0">New here? <a href="{% url 'accounts:register' %}">Create an account</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

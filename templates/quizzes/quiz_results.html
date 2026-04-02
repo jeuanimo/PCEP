@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Quiz Results — PCEP Prep Coach{% endblock %}
+
+{% block content %}
+
+{# ── Header ──────────────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <h1><i class="bi bi-clipboard-check me-2"></i>Quiz Results</h1>
+  {% if attempt.is_passed %}
+  <span class="badge bg-success fs-5 px-3 py-2">
+    <i class="bi bi-trophy me-1"></i>Passed
+  </span>
+  {% else %}
+  <span class="badge bg-danger fs-5 px-3 py-2">
+    <i class="bi bi-x-circle me-1"></i>Keep Practicing
+  </span>
+  {% endif %}
+</div>
+
+{# ── Score summary card ───────────────────────────────────────────────────── #}
+<div class="card card-coach p-4 mb-4">
+  <div class="row text-center g-3">
+    <div class="col-6 col-md-3">
+      <h2 class="mb-0 {% if attempt.score >= 70 %}text-success{% elif attempt.score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+        {{ attempt.score|floatformat:0 }}%
+      </h2>
+      <small class="text-muted">Score</small>
+    </div>
+    <div class="col-6 col-md-3">
+      <h2 class="text-success mb-0">{{ attempt.correct_count }}</h2>
+      <small class="text-muted">Correct</small>
+    </div>
+    <div class="col-6 col-md-3">
+      <h2 class="text-danger mb-0">{{ attempt.incorrect_count }}</h2>
+      <small class="text-muted">Incorrect</small>
+    </div>
+    <div class="col-6 col-md-3">
+      <h2 class="mb-0">{{ attempt.total_questions }}</h2>
+      <small class="text-muted">Total</small>
+    </div>
+  </div>
+
+  {# Overall progress bar #}
+  <div class="progress progress-coach mt-4" style="height:18px">
+    <div class="progress-bar
+      {% if attempt.score >= 70 %}bg-success{% elif attempt.score >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+      role="progressbar"
+      style="width:{{ attempt.score }}%"
+      aria-valuenow="{{ attempt.score }}" aria-valuemin="0" aria-valuemax="100">
+      {{ attempt.score|floatformat:0 }}%
+    </div>
+  </div>
+  <div class="d-flex justify-content-between mt-1">
+    <small class="text-muted">0%</small>
+    <small class="text-muted fw-semibold">Passing: 70%</small>
+    <small class="text-muted">100%</small>
+  </div>
+
+  {# Duration #}
+  {% if attempt.duration_seconds %}
+  <div class="text-center mt-2 text-muted small">
+    <i class="bi bi-stopwatch me-1"></i>Completed in
+    {% with secs=attempt.duration_seconds %}
+      {% if secs >= 60 %}{{ secs|floatformat:0 }}s (≈ {% widthratio secs 60 1 %} min)
+      {% else %}{{ secs|floatformat:0 }}s{% endif %}
+    {% endwith %}
+  </div>
+  {% endif %}
+</div>
+
+{# ── Domain breakdown ────────────────────────────────────────────────────── #}
+{% if domain_breakdown %}
+<div class="card card-coach p-4 mb-4">
+  <h4 class="mb-3"><i class="bi bi-bar-chart-fill me-2"></i>Score by Domain</h4>
+  {% for db in domain_breakdown %}
+  <div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+      <span class="fw-semibold domain-label-{{ db.domain.order }}">
+        <i class="{{ db.domain.icon }} me-1"></i>{{ db.domain.title }}
+      </span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small">{{ db.correct }}/{{ db.total }}</span>
+        <span class="fw-bold
+          {% if db.score >= 70 %}text-success{% elif db.score >= 40 %}text-warning{% else %}text-danger{% endif %}">
+          {{ db.score|floatformat:0 }}%
+        </span>
+        {% if db.is_weak %}
+        <span class="badge bg-danger-subtle text-danger" title="Below passing threshold">Weak</span>
+        {% else %}
+        <span class="badge bg-success-subtle text-success"><i class="bi bi-check"></i></span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="progress progress-coach">
+      <div class="progress-bar {{ db.color_class }}"
+           role="progressbar"
+           style="width:{{ db.score }}%"
+           aria-valuenow="{{ db.score }}" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+    <div class="d-flex justify-content-between mt-1">
+      <small class="text-muted">{{ db.domain.weight_percent }}% of PCEP exam</small>
+      {% if db.is_weak %}
+      <a href="{% url 'quizzes:domain_quiz' db.domain.pk %}"
+         class="btn btn-link btn-sm p-0 text-danger" style="font-size:.8rem">
+        <i class="bi bi-arrow-repeat me-1"></i>Drill this domain →
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Weak areas callout ───────────────────────────────────────────────────── #}
+{% if weak_topics %}
+<div class="card card-coach p-4 mb-4 border-start border-4 border-warning">
+  <h4 class="mb-3"><i class="bi bi-bullseye me-2 text-warning"></i>Topics to Focus On</h4>
+  <p class="text-muted small mb-3">
+    You scored below 70% on these topics in this quiz.
+    Study the lessons, then drill them with a topic quiz.
+  </p>
+  <div class="row g-2">
+    {% for wt in weak_topics %}
+    <div class="col-sm-6">
+      <div class="p-3 rounded border
+        {% if wt.score < 40 %}border-danger bg-danger-subtle{% else %}border-warning bg-warning-subtle{% endif %}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-semibold small">{{ wt.topic.name }}</div>
+            <small class="text-muted">{{ wt.topic.domain.title|truncatechars:35 }}</small>
+          </div>
+          <span class="badge {% if wt.score < 40 %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+            {{ wt.score|floatformat:0 }}%
+          </span>
+        </div>
+        <div class="d-flex gap-1 mt-2">
+          <a href="{% url 'learning:topic_detail' wt.topic.pk %}"
+             class="btn btn-sm btn-outline-secondary flex-grow-1" style="font-size:.75rem">
+            <i class="bi bi-book me-1"></i>Study
+          </a>
+          <a href="{% url 'quizzes:topic_quiz' wt.topic.pk %}"
+             class="btn btn-sm btn-outline-primary flex-grow-1" style="font-size:.75rem">
+            <i class="bi bi-pencil me-1"></i>Quiz
+          </a>
+          <a href="{% url 'progress:topic_progress' wt.topic.pk %}"
+             class="btn btn-sm btn-outline-secondary" style="font-size:.75rem">
+            <i class="bi bi-graph-up"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Per-answer review ────────────────────────────────────────────────────── #}
+<h4 class="mb-3"><i class="bi bi-list-check me-2"></i>Answer Review</h4>
+
+{% for ua in answers %}
+<div class="card mb-2 border-start border-4
+  {% if ua.is_correct %}border-success{% else %}border-danger{% endif %} p-3">
+
+  <div class="d-flex justify-content-between align-items-start gap-2">
+    <div class="flex-grow-1">
+
+      {# Question meta badges #}
+      <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+        <span class="badge bg-secondary small">{{ ua.question.get_question_type_display }}</span>
+        <span class="badge bg-secondary small">{{ ua.question.get_difficulty_display }}</span>
+        <small class="text-muted">{{ ua.question.topic.name }}</small>
+        {% if ua.question.pcep_objective %}
+        <small class="text-muted">· {{ ua.question.pcep_objective }}</small>
+        {% endif %}
+      </div>
+
+      {# Question text #}
+      <p class="mb-1 fw-semibold">{{ ua.question.text }}</p>
+
+      {# Code snippet #}
+      {% if ua.question.code_snippet %}
+      <pre class="bg-dark text-light p-2 rounded small mb-2"
+           style="font-size:.82rem;overflow-x:auto"><code>{{ ua.question.code_snippet }}</code></pre>
+      {% endif %}
+
+      {# What the user answered #}
+      {% if ua.selected_choices.exists %}
+      <div class="small text-muted mb-1">
+        <i class="bi bi-cursor me-1"></i>Your answer:
+        {% for c in ua.selected_choices.all %}
+          <span class="{% if c.is_correct %}text-success fw-semibold{% else %}text-danger{% endif %}">
+            {{ c.text }}{% if not forloop.last %}, {% endif %}
+          </span>
+        {% endfor %}
+      </div>
+      {% elif ua.text_answer %}
+      <div class="small text-muted mb-1">
+        <i class="bi bi-cursor me-1"></i>Your answer:
+        <span class="{% if ua.is_correct %}text-success fw-semibold{% else %}text-danger{% endif %}">
+          {{ ua.text_answer }}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Correct / wrong badge #}
+    {% if ua.is_correct %}
+    <span class="badge bg-success flex-shrink-0 align-self-start px-2 py-1">
+      <i class="bi bi-check-lg me-1"></i>Correct
+    </span>
+    {% else %}
+    <span class="badge bg-danger flex-shrink-0 align-self-start px-2 py-1">
+      <i class="bi bi-x-lg me-1"></i>Wrong
+    </span>
+    {% endif %}
+  </div>
+
+  {# Correct answer + explanation (only on wrong answers) #}
+  {% if not ua.is_correct %}
+  <div class="mt-2 ps-2 border-start border-2 border-success">
+    <small class="text-success fw-semibold">Correct answer:</small>
+    {% for c in ua.question.choices.all %}
+      {% if c.is_correct %}
+      <div class="small text-success fw-semibold">{{ c.text }}</div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if ua.question.explanation %}
+  <div class="mt-2 p-2 bg-light rounded">
+    <small>
+      <i class="bi bi-lightbulb me-1 text-warning"></i>
+      <strong>Explanation:</strong> {{ ua.question.explanation }}
+    </small>
+  </div>
+  {% endif %}
+  {% if ua.question.hint %}
+  <div class="mt-1">
+    <small class="text-muted">
+      <i class="bi bi-lightbulb me-1"></i>Hint: {{ ua.question.hint }}
+    </small>
+  </div>
+  {% endif %}
+  <div class="mt-2 d-flex gap-1 flex-wrap">
+    <a href="{% url 'progress:topic_progress' ua.question.topic.pk %}"
+       class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-graph-up me-1"></i>Topic Progress
+    </a>
+    <a href="{% url 'quizzes:topic_quiz' ua.question.topic.pk %}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i>Quiz This Topic
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endfor %}
+
+{# ── Footer actions ───────────────────────────────────────────────────────── #}
+<div class="d-flex justify-content-center gap-2 mt-4 flex-wrap">
+  <a href="{% url 'progress:dashboard' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-speedometer2 me-1"></i>Dashboard
+  </a>
+  <a href="{% url 'quizzes:quiz_hub' %}" class="btn btn-outline-primary">
+    <i class="bi bi-pencil-square me-1"></i>New Quiz
+  </a>
+  {% if attempt.mode == 'exam' %}
+  <a href="{% url 'quizzes:exam_mode' %}" class="btn btn-primary">
+    <i class="bi bi-arrow-repeat me-1"></i>Retake Exam
+  </a>
+  {% else %}
+  <a href="{% url 'quizzes:review_quiz' %}" class="btn btn-danger">
+    <i class="bi bi-arrow-repeat me-1"></i>Practice Mistakes
+  </a>
+  {% endif %}
+  <a href="{% url 'learning:domain_list' %}" class="btn btn-outline-success">
+    <i class="bi bi-book me-1"></i>Keep Learning
+  </a>
+</div>
+
+{% endblock %}
