@@ -99,7 +99,7 @@ No heavyweight JavaScript frameworks — the frontend uses server-rendered Djang
 ```
 PCEP/
 ├── manage.py
-├── pcep_prep_coach/          # Django project settings
+├── pcep_coach/               # Django project settings
 │   ├── settings.py
 │   ├── urls.py
 │   ├── wsgi.py

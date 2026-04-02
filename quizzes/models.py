@@ -102,9 +102,10 @@ class QuizAttempt(models.Model):
     """A single quiz session — topic drill, domain quiz, or full exam."""
 
     MODE_CHOICES = [
-        ("topic", "Topic Quiz"),
+        ("topic",  "Topic Quiz"),
         ("domain", "Domain Quiz"),
-        ("exam", "Full Exam Mode"),
+        ("mixed",  "Mixed Mode"),
+        ("exam",   "Full Exam Mode"),
         ("review", "Mistake Review"),
     ]
 
@@ -158,14 +159,21 @@ class QuizAttempt(models.Model):
             return (self.finished_at - self.started_at).total_seconds()
         return None
 
-    def finalise(self):
-        """Compute score, set is_passed, stamp finished_at."""
+    def finalise(self, correct: int, total: int) -> None:
+        """Compute score, set is_passed, stamp finished_at, and save.
+
+        Call this once from SubmitQuizView instead of setting fields manually.
+        """
         from django.utils import timezone
-        if self.total_questions:
-            self.score = round(self.correct_count / self.total_questions * 100, 1)
+
+        self.correct_count  = correct
+        self.total_questions = total
+        self.score   = round(correct / total * 100, 1) if total else 0.0
         self.is_passed = self.score >= 70
         self.finished_at = timezone.now()
-        self.save(update_fields=["score", "is_passed", "finished_at"])
+        self.save(update_fields=[
+            "correct_count", "total_questions", "score", "is_passed", "finished_at"
+        ])
 
 
 class UserAnswer(models.Model):

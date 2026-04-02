@@ -1,8 +1,8 @@
 """Admin for the labs app — coding challenges and student submissions."""
 
 from django.contrib import admin
-from django.utils.html import format_html
 
+from core.admin_utils import coloured_score
 from .models import CodingAttempt, CodingChallenge
 
 
@@ -73,12 +73,8 @@ class CodingChallengeAdmin(admin.ModelAdmin):
         total = obj.attempts.count()
         if not total:
             return "—"
-        solved = obj.attempts.filter(is_correct=True).count()
-        pct = solved / total * 100
-        colour = "#198754" if pct >= 50 else "#dc3545"
-        return format_html(
-            '<span style="color:{}">{:.0f}%</span>', colour, pct
-        )
+        pct = obj.attempts.filter(is_correct=True).count() / total * 100
+        return coloured_score(pct)
 
 
 # ── CodingAttempt ──────────────────────────────────────────────────────────

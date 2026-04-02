@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.core.cache import cache
 from django.db.models import Avg, Count, Sum
 from django.urls import reverse
 
@@ -18,6 +19,23 @@ if TYPE_CHECKING:
 
 
 # ── Readiness score ────────────────────────────────────────────────────────
+
+def _user_cache_key(prefix: str, user) -> str:
+    return f"pcep:{prefix}:{user.pk}"
+
+
+def invalidate_user_progress_cache(user) -> None:
+    """Clear all cached progress aggregates for *user*.
+
+    Call this after any event that changes TopicProgress (quiz submit, lab
+    solve, lesson read) so the next dashboard load reflects fresh data.
+    """
+    cache.delete_many([
+        _user_cache_key("readiness", user),
+        _user_cache_key("domain_stats", user),
+        _user_cache_key("missed_count", user),
+    ])
+
 
 def readiness_score(user: "AbstractUser") -> float:
     """Weighted exam readiness score (0–100).
@@ -31,7 +49,15 @@ def readiness_score(user: "AbstractUser") -> float:
 
     Crucially the denominator is ALL topics so completely unstarted
     domains pull the score down — this gives an honest readiness picture.
+
+    Result is cached for 60 s per user (dashboard may call this multiple
+    times; the cache avoids repeated aggregate queries).
     """
+    ck = _user_cache_key("readiness", user)
+    cached = cache.get(ck)
+    if cached is not None:
+        return cached
+
     from learning.models import Domain
     from .models import TopicProgress
 
@@ -47,7 +73,9 @@ def readiness_score(user: "AbstractUser") -> float:
         # Average over ALL topics, not just started ones
         avg_conf = conf_sum / topic_count
         total += avg_conf * domain.weight   # domain.weight returns 0-1 float
-    return round(min(total, 100), 1)
+    result = round(min(total, 100), 1)
+    cache.set(ck, result, timeout=60)
+    return result
 
 
 # ── Domain-level stats ─────────────────────────────────────────────────────
@@ -62,7 +90,14 @@ def domain_stats(user: "AbstractUser") -> list[dict]:
         studied_count   topics with at least one attempt
         mastered_count  topics with status='mastered'
         color_class     CSS class (bg-domain-1 … bg-domain-4)
+
+    Result is cached for 60 s per user.
     """
+    ck = _user_cache_key("domain_stats", user)
+    cached = cache.get(ck)
+    if cached is not None:
+        return cached
+
     from learning.models import Domain
     from .models import TopicProgress
 
@@ -85,6 +120,7 @@ def domain_stats(user: "AbstractUser") -> list[dict]:
             "mastered_count": progresses.filter(status="mastered").count(),
             "color_class": f"bg-domain-{domain.order}",
         })
+    cache.set(ck, stats, timeout=60)
     return stats
 
 
@@ -224,7 +260,14 @@ def missed_question_count(user: "AbstractUser") -> int:
 
     A question is "still missed" when the user got it wrong at least once
     AND has never gotten it right in any attempt.
+
+    Result is cached for 60 s per user.
     """
+    ck = _user_cache_key("missed_count", user)
+    cached = cache.get(ck)
+    if cached is not None:
+        return cached
+
     from quizzes.models import UserAnswer
 
     wrong_ids = set(
@@ -237,7 +280,9 @@ def missed_question_count(user: "AbstractUser") -> int:
             "question_id", flat=True
         )
     )
-    return len(wrong_ids - right_ids)
+    result = len(wrong_ids - right_ids)
+    cache.set(ck, result, timeout=60)
+    return result
 
 
 def get_review_questions(user: "AbstractUser", limit: int = 20):

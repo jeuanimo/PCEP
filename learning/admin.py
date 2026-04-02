@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Domain, Flashcard, Lesson, Topic
+from .models import Domain, Flashcard, FlashcardRating, Lesson, Topic
 
 
 # ── Inlines ────────────────────────────────────────────────────────────────
@@ -167,3 +167,26 @@ class FlashcardAdmin(admin.ModelAdmin):
     @admin.display(description="Front")
     def front_short(self, obj):
         return obj.front[:70] + ("…" if len(obj.front) > 70 else "")
+
+
+# ── FlashcardRating ────────────────────────────────────────────────────────
+
+@admin.register(FlashcardRating)
+class FlashcardRatingAdmin(admin.ModelAdmin):
+    """Read-only audit of per-user flashcard self-assessments.
+
+    Useful for spotting which cards consistently get rated Hard across many
+    users — a signal that the card wording or the topic lesson needs work.
+    """
+    list_display  = ("user", "flashcard_front", "rating", "rated_at")
+    list_filter   = ("rating", "flashcard__topic__domain", "flashcard__topic")
+    search_fields = ("user__username", "flashcard__front")
+    readonly_fields = ("user", "flashcard", "rating", "rated_at")
+    date_hierarchy = "rated_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.display(description="Flashcard")
+    def flashcard_front(self, obj):
+        return obj.flashcard.front[:70] + ("…" if len(obj.flashcard.front) > 70 else "")

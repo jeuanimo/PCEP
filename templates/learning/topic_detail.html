@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}{{ topic.name }} — PCEP Prep Coach{% endblock %}
+{% block title %}{{ topic.name }} — PCEP Prep Coach{% endblock title %}
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{% url 'learning:domain_list' %}">Domains</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'learning:domain_detail' topic.domain.slug %}">{{ topic.domain.title }}</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'learning:domain_detail' topic.domain.slug %}">{{ topic.domain.name }}</a></li>
     <li class="breadcrumb-item active">{{ topic.name }}</li>
   </ol>
 </nav>
@@ -86,4 +86,4 @@
   {% endfor %}
 </div>
 {% endif %}
-{% endblock %}
+{% endblock content %}

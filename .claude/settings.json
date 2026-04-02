@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python manage.py seed_data)",
-      "Bash(python manage.py shell)",
-      "Bash(python manage.py check)"
-    ]
-  }
-}

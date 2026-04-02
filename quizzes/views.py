@@ -2,26 +2,25 @@
 
 URL → view map
 ──────────────
-  /quiz/                              QuizHubView        (pick a mode)
-  /quiz/topic/<pk>/                   TopicQuizView      (start topic drill)
-  /quiz/domain/<pk>/                  DomainQuizView     (start domain drill)
-  /quiz/mixed/                        MixedQuizView      (weighted 20-Q)
-  /quiz/exam/                         ExamModeView       (weighted 40-Q, timed)
-  /quiz/submit/<attempt_pk>/          SubmitQuizView     (POST → grade → redirect)
-  /quiz/results/<pk>/                 QuizResultsView    (score + weak areas)
-  /quiz/review/                       ReviewMistakesView (read-only missed list)
-  /quiz/review/practice/              ReviewQuizView     (interactive missed-Q quiz)
+  /quiz/                              QuizHubView
+  /quiz/topic/<pk>/                   TopicQuizView
+  /quiz/domain/<pk>/                  DomainQuizView
+  /quiz/mixed/                        MixedQuizView
+  /quiz/exam/                         ExamModeView
+  /quiz/submit/<attempt_pk>/          SubmitQuizView
+  /quiz/results/<pk>/                 QuizResultsView
+  /quiz/review/                       ReviewMistakesView
+  /quiz/review/practice/              ReviewQuizView
 """
-
-import random
+from collections import defaultdict
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
-from django.utils import timezone
-from django.views.generic import DetailView, FormView, TemplateView, View
+from django.views.generic import DetailView, TemplateView, View
 
 from learning.models import Domain, Topic
 from progress.models import TopicProgress
+from progress.services import get_review_questions, invalidate_user_progress_cache
 
 from .forms import DomainQuizForm, TopicQuizForm
 from .models import AnswerChoice, Question, QuizAttempt, UserAnswer
@@ -47,15 +46,15 @@ class QuizHubView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["domains"]          = Domain.objects.filter(is_active=True).order_by("order")
-        ctx["topics"]           = (
+        ctx["domains"] = Domain.objects.filter(is_active=True).order_by("order")
+        ctx["topics"] = (
             Topic.objects.filter(is_active=True)
             .select_related("domain")
             .order_by("domain__order", "order")
         )
-        ctx["domain_form"]      = DomainQuizForm()
-        ctx["topic_form"]       = TopicQuizForm()
-        ctx["recent_attempts"]  = (
+        ctx["domain_form"]     = DomainQuizForm()
+        ctx["topic_form"]      = TopicQuizForm()
+        ctx["recent_attempts"] = (
             QuizAttempt.objects.filter(user=self.request.user, finished_at__isnull=False)
             .select_related("topic", "domain")
             .order_by("-started_at")[:5]
@@ -83,13 +82,12 @@ class TopicQuizView(LoginRequiredMixin, TemplateView):
             total_questions=len(questions),
         )
         ctx.update({
-            "topic":       topic,
-            "questions":   questions,
-            "attempt":     attempt,
-            "mode":        "topic",
-            "mode_label":  f"Topic Quiz — {topic.name}",
-            "time_limit":  None,
-            "q_total":     len(questions),
+            "topic":      topic,
+            "questions":  questions,
+            "attempt":    attempt,
+            "mode_label": f"Topic Quiz — {topic.name}",
+            "time_limit": None,
+            "q_total":    len(questions),
         })
         return ctx
 
@@ -114,13 +112,12 @@ class DomainQuizView(LoginRequiredMixin, TemplateView):
             total_questions=len(questions),
         )
         ctx.update({
-            "domain":      domain,
-            "questions":   questions,
-            "attempt":     attempt,
-            "mode":        "domain",
-            "mode_label":  f"Domain Quiz — {domain.title}",
-            "time_limit":  None,
-            "q_total":     len(questions),
+            "domain":     domain,
+            "questions":  questions,
+            "attempt":    attempt,
+            "mode_label": f"Domain Quiz — {domain.title}",
+            "time_limit": None,
+            "q_total":    len(questions),
         })
         return ctx
 
@@ -128,8 +125,7 @@ class DomainQuizView(LoginRequiredMixin, TemplateView):
 # ── Mixed mode ─────────────────────────────────────────────────────────────
 
 class MixedQuizView(LoginRequiredMixin, TemplateView):
-    """Weighted 20-question mixed quiz — same proportions as the real exam,
-    but shorter so it can be completed in a single sitting."""
+    """Weighted 20-question mixed quiz — same blueprint proportions as the exam."""
     template_name = QUIZ_TEMPLATE
 
     def get_context_data(self, **kwargs):
@@ -138,13 +134,12 @@ class MixedQuizView(LoginRequiredMixin, TemplateView):
 
         attempt = QuizAttempt.objects.create(
             user=self.request.user,
-            mode="domain",    # closest existing mode; "mixed" not in model choices
+            mode="mixed",
             total_questions=len(questions),
         )
         ctx.update({
             "questions":  questions,
             "attempt":    attempt,
-            "mode":       "mixed",
             "mode_label": "Mixed Mode Quiz",
             "time_limit": None,
             "q_total":    len(questions),
@@ -159,9 +154,9 @@ class ExamModeView(LoginRequiredMixin, TemplateView):
     template_name = QUIZ_TEMPLATE
 
     def get_context_data(self, **kwargs):
-        ctx       = super().get_context_data(**kwargs)
-        questions = pick_weighted_questions(total=EXAM_TOTAL)
-        time_limit = 45 * 60   # 45 minutes in seconds
+        ctx        = super().get_context_data(**kwargs)
+        questions  = pick_weighted_questions(total=EXAM_TOTAL)
+        time_limit = 45 * 60  # 45 minutes in seconds
 
         attempt = QuizAttempt.objects.create(
             user=self.request.user,
@@ -172,7 +167,6 @@ class ExamModeView(LoginRequiredMixin, TemplateView):
         ctx.update({
             "questions":  questions,
             "attempt":    attempt,
-            "mode":       "exam",
             "mode_label": "Full Exam Mode",
             "time_limit": time_limit,
             "q_total":    len(questions),
@@ -197,30 +191,28 @@ class SubmitQuizView(LoginRequiredMixin, View):
             except (ValueError, Question.DoesNotExist):
                 continue
 
-            # Prevent duplicate UserAnswer rows on double-submit
-            if UserAnswer.objects.filter(attempt=attempt, question=question).exists():
-                ua = UserAnswer.objects.get(attempt=attempt, question=question)
-            else:
-                ua = UserAnswer(attempt=attempt, question=question, user=request.user)
+            # Guard against double-submit creating duplicate rows
+            ua, _created = UserAnswer.objects.get_or_create(
+                attempt=attempt,
+                question=question,
+                defaults={"user": request.user},
+            )
 
             if question.question_type in ("mc", "ms", "tf"):
                 selected_ids = request.POST.getlist(f"q_{question.pk}")
-                ua.save()   # need PK before setting M2M
-                if selected_ids:
-                    ua.selected_choices.set(selected_ids)
+                if _created:
+                    ua.save()  # need PK before setting M2M
+                ua.selected_choices.set(selected_ids)
                 correct_ids = set(
                     question.choices.filter(is_correct=True).values_list("id", flat=True)
                 )
-                chosen_ids  = {int(x) for x in selected_ids}
-                ua.is_correct = (correct_ids == chosen_ids)
-
-            else:   # fib, code_output, short
-                raw_text     = request.POST.get(f"q_{question.pk}_text", "").strip()
+                ua.is_correct = ({int(x) for x in selected_ids} == correct_ids)
+            else:
+                raw_text      = request.POST.get(f"q_{question.pk}_text", "").strip()
                 ua.text_answer = raw_text
                 ua.is_correct  = score_text_answer(question, raw_text)
-                ua.save()
 
-            ua.save()
+            ua.save(update_fields=["is_correct", "text_answer"] if not _created else None)
 
             if ua.is_correct:
                 correct += 1
@@ -231,16 +223,13 @@ class SubmitQuizView(LoginRequiredMixin, View):
             )
             tp.record_answer(ua.is_correct)
 
-        # Finalise the attempt
-        total = max(len(question_ids), 1)
-        attempt.correct_count  = correct
-        attempt.total_questions = total
-        attempt.score          = round(correct / total * 100, 1)
-        attempt.is_passed      = attempt.score >= 70
-        attempt.finished_at    = timezone.now()
-        attempt.save()
+        # Finalise the attempt in one save via the model method
+        attempt.finalise(correct=correct, total=max(len(question_ids), 1))
 
-        # Maintain streak
+        # Invalidate cached aggregates so the dashboard reflects this attempt
+        invalidate_user_progress_cache(request.user)
+
+        # Maintain study streak
         profile = getattr(request.user, "profile", None)
         if profile:
             profile.update_streak()
@@ -267,9 +256,9 @@ class QuizResultsView(LoginRequiredMixin, DetailView):
             .prefetch_related("selected_choices", "question__choices")
             .order_by("answered_at")
         )
-        ctx["answers"]         = answers
+        ctx["answers"]          = answers
         ctx["domain_breakdown"] = analyse_weak_areas(answers)
-        ctx["weak_topics"]     = analyse_topic_breakdown(answers)
+        ctx["weak_topics"]      = analyse_topic_breakdown(answers)
         return ctx
 
 
@@ -293,7 +282,7 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
         )
         never_right_ids = wrong_ids - right_ids
 
-        # Fetch most-recent wrong attempt per question, ordered for grouping
+        # Fetch all wrong answers for never-right questions, ordered for grouping
         all_missed = (
             UserAnswer.objects.filter(
                 user=user,
@@ -301,12 +290,15 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
                 question_id__in=never_right_ids,
             )
             .select_related("question__topic__domain")
-            .prefetch_related("question__choices")
-            .order_by("question__topic__domain__order",
-                      "question__topic__order",
-                      "-answered_at")
+            .prefetch_related("question__choices", "selected_choices")
+            .order_by(
+                "question__topic__domain__order",
+                "question__topic__order",
+                "-answered_at",
+            )
         )
-        # Deduplicate to one row per question (most-recent wrong, SQLite-safe)
+
+        # Keep only the most-recent wrong answer per question (SQLite-safe)
         seen: set = set()
         missed = []
         for ua in all_missed:
@@ -315,9 +307,6 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
                 missed.append(ua)
 
         # Group into domain → topic → [UserAnswer]
-        from collections import defaultdict
-        from learning.models import Domain, Topic as LTopic
-
         domain_map: dict = defaultdict(lambda: defaultdict(list))
         for ua in missed:
             domain_map[ua.question.topic.domain][ua.question.topic].append(ua)
@@ -327,7 +316,7 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
             if domain not in domain_map:
                 continue
             topic_groups = []
-            for topic in LTopic.objects.filter(
+            for topic in Topic.objects.filter(
                 domain=domain, is_active=True
             ).order_by("order"):
                 if topic not in domain_map[domain]:
@@ -351,11 +340,8 @@ class ReviewQuizView(LoginRequiredMixin, TemplateView):
     template_name = QUIZ_TEMPLATE
 
     def get_context_data(self, **kwargs):
-        ctx  = super().get_context_data(**kwargs)
-        user = self.request.user
-
-        from progress.services import get_review_questions
-        questions = get_review_questions(user, limit=20)
+        ctx       = super().get_context_data(**kwargs)
+        questions = get_review_questions(self.request.user, limit=20)
 
         if not questions:
             ctx["no_review_questions"] = True
@@ -363,14 +349,13 @@ class ReviewQuizView(LoginRequiredMixin, TemplateView):
             return ctx
 
         attempt = QuizAttempt.objects.create(
-            user=user,
+            user=self.request.user,
             mode="review",
             total_questions=len(questions),
         )
         ctx.update({
             "questions":  questions,
             "attempt":    attempt,
-            "mode":       "review",
             "mode_label": "Mistake Review",
             "time_limit": None,
             "q_total":    len(questions),

@@ -3,8 +3,8 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.html import format_html
 
+from core.admin_utils import coloured_score, score_colour
 from .models import UserProfile
 
 User = get_user_model()
@@ -43,18 +43,9 @@ class CustomUserAdmin(BaseUserAdmin):
     @admin.display(description="Readiness")
     def readiness_score(self, obj):
         try:
-            score = obj.profile.exam_readiness_score
+            return coloured_score(obj.profile.exam_readiness_score)
         except UserProfile.DoesNotExist:
             return "—"
-        if score >= 70:
-            colour = "#198754"
-        elif score >= 40:
-            colour = "#ffc107"
-        else:
-            colour = "#dc3545"
-        return format_html(
-            '<span style="color:{};font-weight:600">{:.0f}%</span>', colour, score
-        )
 
 
 # Re-register User with the extended admin
@@ -99,19 +90,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 
     @admin.display(description="Readiness")
     def readiness_badge(self, obj):
-        score = obj.exam_readiness_score
-        if score >= 70:
-            colour = "#198754"
-        elif score >= 40:
-            colour = "#ffc107"
-        else:
-            colour = "#dc3545"
-        return format_html(
-            '<span style="color:{};font-weight:600">{:.0f}%</span>', colour, score
-        )
+        return coloured_score(obj.exam_readiness_score)
 
     @admin.display(description="Days to exam")
     def days_until_label(self, obj):
+        from django.utils.html import format_html
         days = obj.days_until_exam
         if days is None:
             return "—"

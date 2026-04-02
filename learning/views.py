@@ -5,8 +5,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import ListView, DetailView, TemplateView
+from django_ratelimit.decorators import ratelimit
 
 from .models import Domain, Topic, Lesson, Flashcard, FlashcardRating
 from progress.models import TopicProgress
@@ -195,6 +197,10 @@ class FlashcardView(LoginRequiredMixin, TemplateView):
 
 # ── Flashcard AJAX rate endpoint ───────────────────────────────────────────
 
+@method_decorator(
+    ratelimit(key="user", rate="60/m", method="POST", block=True),
+    name="post",
+)
 class FlashcardRateView(LoginRequiredMixin, View):
     """POST {flashcard_id, rating} → upsert FlashcardRating → JSON response."""
 

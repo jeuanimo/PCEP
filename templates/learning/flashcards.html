@@ -1,340 +1,74 @@
 {% extends "base.html" %}
-{% block title %}Flashcards: {{ topic.name }} — PCEP Prep Coach{% endblock %}
-
-{% block extra_css %}
-<style>
-.rating-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; min-width: 120px; }
-.btn-rate { min-width: 90px; transition: transform .1s; }
-.btn-rate:active { transform: scale(.95); }
-.card-rating-badge {
-  position: absolute; top: .6rem; right: .6rem;
-  font-size: .7rem; padding: .2em .55em;
-}
-.flashcard { position: relative; }
-</style>
-{% endblock %}
-
+{% block title %}Flashcards: {{ topic.name }} — PCEP Prep Coach{% endblock title %}
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
-    <li class="breadcrumb-item">
-      <a href="{% url 'learning:flashcard_browse' %}">Flashcards</a>
-    </li>
-    <li class="breadcrumb-item">
-      <a href="{% url 'learning:topic_detail' topic.pk %}">{{ topic.name }}</a>
-    </li>
-    <li class="breadcrumb-item active">Study</li>
+    <li class="breadcrumb-item"><a href="{% url 'learning:topic_detail' topic.pk %}">{{ topic.name }}</a></li>
+    <li class="breadcrumb-item active">Flashcards</li>
   </ol>
 </nav>
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <h2 class="mb-0"><i class="bi bi-card-text me-2"></i>{{ topic.name }}</h2>
-  <div class="d-flex gap-2 align-items-center flex-wrap">
-    <span class="badge bg-success"   id="easy-badge">{{ easy_count }} easy</span>
-    <span class="badge bg-warning text-dark" id="medium-badge">{{ medium_count }} medium</span>
-    <span class="badge bg-danger"    id="hard-badge">{{ hard_count }} hard</span>
-    <span class="badge bg-secondary" id="unrated-badge">{{ unrated_count }} unrated</span>
-    <div class="vr"></div>
-    <button class="btn btn-sm btn-outline-secondary" onclick="shuffleCards()">
-      <i class="bi bi-shuffle me-1"></i>Shuffle
-    </button>
-    <div class="dropdown">
-      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-        <i class="bi bi-funnel me-1"></i>Filter
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="#" onclick="applyFilter('all')">All cards</a></li>
-        <li><a class="dropdown-item" href="#" onclick="applyFilter('hard')">Hard only</a></li>
-        <li><a class="dropdown-item" href="#" onclick="applyFilter('medium')">Medium only</a></li>
-        <li><a class="dropdown-item" href="#" onclick="applyFilter('easy')">Easy only</a></li>
-        <li><a class="dropdown-item" href="#" onclick="applyFilter('')">Unrated only</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
+<h2 class="mb-4"><i class="bi bi-card-text me-2"></i>Flashcards: {{ topic.name }}</h2>
 
-{% if flashcards %}
 <div id="flashcard-app">
-
-  {# Progress bar + counter #}
-  <div class="d-flex align-items-center gap-3 mb-3">
-    <span class="badge bg-primary px-3 fs-6" id="card-counter">1 / {{ flashcards|length }}</span>
-    <div class="progress flex-grow-1" style="height:6px;border-radius:3px">
-      <div class="progress-bar bg-primary" id="fc-progress" style="width:0%"></div>
-    </div>
-    <span class="text-muted small" id="filter-label"></span>
+  <div class="text-center mb-3">
+    <span class="badge bg-primary fs-6" id="card-counter">1 / {{ flashcards|length }}</span>
   </div>
 
-  {# Flashcard flip widget #}
-  <div class="flashcard mx-auto mb-3" style="max-width:640px" id="flashcard"
-       onclick="flipCard()" role="button" tabindex="0"
-       aria-label="Click or press Space to flip">
+  <button type="button" class="flashcard mx-auto d-block border-0 bg-transparent p-0 text-start w-100"
+          id="flashcard" onclick="flipCard()">
     <div class="flashcard-inner" id="flashcard-inner">
-
       <div class="flashcard-front">
-        {# Current rating badge shown on front #}
-        <span id="front-rating-badge" class="card-rating-badge badge" style="display:none"></span>
-        <div class="text-center w-100">
-          <div class="text-muted small mb-3 text-uppercase fw-semibold letter-spacing-1">Question</div>
-          <p class="fs-5 mb-0 fw-semibold" id="card-front"></p>
-        </div>
+        <p class="fs-5 mb-0" id="card-front"></p>
       </div>
-
       <div class="flashcard-back">
-        <div class="text-center w-100">
-          <div class="mb-3 opacity-75 small text-uppercase fw-semibold">Answer</div>
-          <p class="fs-5 mb-2 fw-semibold" id="card-back"></p>
-          <p class="small opacity-75 mb-0 fst-italic" id="card-hint"></p>
-        </div>
+        <p class="fs-5 mb-0" id="card-back"></p>
       </div>
-
     </div>
-  </div>
+  </button>
 
-  {# Rating buttons — shown after flip #}
-  <div id="rating-prompt" class="text-center mb-3" style="display:none">
-    <p class="text-muted small mb-2">How well did you know this?</p>
-    <div class="d-flex justify-content-center gap-2 flex-wrap">
-      <button class="btn btn-success btn-rate" onclick="rateCard('easy')" id="btn-easy">
-        <i class="bi bi-emoji-smile me-1"></i>Easy
-      </button>
-      <button class="btn btn-warning btn-rate text-dark" onclick="rateCard('medium')" id="btn-medium">
-        <i class="bi bi-emoji-neutral me-1"></i>Medium
-      </button>
-      <button class="btn btn-danger btn-rate" onclick="rateCard('hard')" id="btn-hard">
-        <i class="bi bi-emoji-frown me-1"></i>Hard
-      </button>
-    </div>
+  <div class="d-flex justify-content-center gap-3 mt-4">
+    <button class="btn btn-outline-primary" onclick="prevCard()"><i class="bi bi-arrow-left"></i> Previous</button>
+    <button class="btn btn-outline-secondary" onclick="flipCard()"><i class="bi bi-arrow-clockwise"></i> Flip</button>
+    <button class="btn btn-primary" onclick="nextCard()">Next <i class="bi bi-arrow-right"></i></button>
   </div>
-
-  {# Navigation #}
-  <div class="d-flex justify-content-center align-items-center gap-3 mb-2 flex-wrap">
-    <button class="btn btn-outline-secondary" onclick="prevCard()" id="prev-btn">
-      <i class="bi bi-arrow-left"></i> Prev
-    </button>
-    <button class="btn btn-outline-secondary" onclick="flipCard()">
-      <i class="bi bi-arrow-clockwise me-1"></i>Flip
-    </button>
-    <button class="btn btn-outline-secondary" onclick="nextCard()" id="next-btn">
-      Next <i class="bi bi-arrow-right"></i>
-    </button>
-  </div>
-
-  {# Keyboard hint #}
-  <div class="text-center mb-4" style="font-size:.72rem;color:#adb5bd">
-    <kbd>Space</kbd> flip &nbsp;&middot;&nbsp;
-    <kbd>&larr;</kbd><kbd>&rarr;</kbd> navigate &nbsp;&middot;&nbsp;
-    <kbd>1</kbd> easy &nbsp;<kbd>2</kbd> medium &nbsp;<kbd>3</kbd> hard
-  </div>
-
-  {# Completion banner #}
-  <div id="done-banner" class="card card-coach p-5 text-center" style="display:none">
-    <div class="fs-1 text-success mb-3"><i class="bi bi-trophy-fill"></i></div>
-    <h3>Deck Complete!</h3>
-    <p class="text-muted" id="done-stats"></p>
-    <div class="d-flex justify-content-center gap-2 flex-wrap mt-2">
-      <button class="btn btn-outline-secondary" onclick="restartDeck()">
-        <i class="bi bi-arrow-clockwise me-1"></i>Restart All
-      </button>
-      <button class="btn btn-danger" onclick="applyFilter('hard')" id="retry-hard-btn">
-        <i class="bi bi-exclamation-triangle me-1"></i>Drill Hard Cards
-      </button>
-      {% if topic.questions.count %}
-      <a href="{% url 'quizzes:topic_quiz' topic.pk %}" class="btn btn-primary">
-        <i class="bi bi-pencil-square me-1"></i>Take a Quiz
-      </a>
-      {% endif %}
-    </div>
-  </div>
-
 </div>
-{% else %}
-<div class="card card-coach p-5 text-center">
-  <i class="bi bi-card-text fs-1 text-muted mb-3"></i>
-  <h4>No Flashcards Yet</h4>
-  <p class="text-muted">Check back after reading the lessons for this topic.</p>
-  <a href="{% url 'learning:topic_detail' topic.pk %}" class="btn btn-primary mt-2">Back to Topic</a>
-</div>
-{% endif %}
 
-{% endblock %}
+{% endblock content %}
 
 {% block extra_js %}
 {{ flashcards_json|json_script:"flashcard-data" }}
 <script>
-const allCards  = JSON.parse(document.getElementById('flashcard-data').textContent);
-const rateUrl   = '{{ rate_url }}';
-const csrfToken = '{{ csrf_token }}';
+const flashcards = JSON.parse(document.getElementById('flashcard-data').textContent);
+let currentIndex = 0;
 
-// Active deck (may be filtered subset)
-let deck       = [...allCards];
-let currentIdx = 0;
-let isFlipped  = false;
-
-// Local rating cache (mirrors server)
-const ratings = {};
-allCards.forEach(c => { if (c.rating) ratings[c.id] = c.rating; });
-
-// ── Rating badge helpers ──────────────────────────────────────────────────
-const RATING_CLASS = { easy: 'bg-success', medium: 'bg-warning text-dark', hard: 'bg-danger' };
-const RATING_LABEL = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
-
-function updateSummaryBadges() {
-  const counts = { easy: 0, medium: 0, hard: 0, '': 0 };
-  allCards.forEach(c => counts[ratings[c.id] || '']++);
-  document.getElementById('easy-badge').textContent   = counts.easy   + ' easy';
-  document.getElementById('medium-badge').textContent = counts.medium + ' medium';
-  document.getElementById('hard-badge').textContent   = counts.hard   + ' hard';
-  document.getElementById('unrated-badge').textContent = counts['']   + ' unrated';
-}
-
-function highlightRatingBtn(rating) {
-  ['easy','medium','hard'].forEach(r => {
-    document.getElementById('btn-' + r).style.outline =
-      r === rating ? '3px solid currentColor' : '';
-  });
-}
-
-// ── Render current card ───────────────────────────────────────────────────
 function renderCard() {
-  if (!deck.length) { showDone(); return; }
-  const card = deck[currentIdx];
-
+  const card = flashcards[currentIndex];
   document.getElementById('card-front').textContent = card.front;
-  document.getElementById('card-back').textContent  = card.back;
-  const hintEl = document.getElementById('card-hint');
-  hintEl.textContent = card.hint ? 'Hint: ' + card.hint : '';
-
-  // Front rating badge
-  const badge = document.getElementById('front-rating-badge');
-  const r = ratings[card.id];
-  if (r) {
-    badge.className = 'card-rating-badge badge ' + RATING_CLASS[r];
-    badge.textContent = RATING_LABEL[r];
-    badge.style.display = '';
-  } else {
-    badge.style.display = 'none';
-  }
-
-  // Highlight current rating in buttons
-  highlightRatingBtn(r || null);
-
+  document.getElementById('card-back').textContent = card.back;
+  document.getElementById('card-counter').textContent = (currentIndex + 1) + ' / ' + flashcards.length;
   // Reset flip
   document.getElementById('flashcard').classList.remove('flipped');
-  document.getElementById('rating-prompt').style.display = 'none';
-  isFlipped = false;
-
-  // Progress
-  const pct = deck.length ? Math.round(currentIdx / deck.length * 100) : 0;
-  document.getElementById('card-counter').textContent = (currentIdx + 1) + ' / ' + deck.length;
-  document.getElementById('fc-progress').style.width  = pct + '%';
-  document.getElementById('prev-btn').disabled = currentIdx === 0;
-  document.getElementById('next-btn').disabled = currentIdx >= deck.length - 1;
 }
 
-// ── Flip ──────────────────────────────────────────────────────────────────
 function flipCard() {
   document.getElementById('flashcard').classList.toggle('flipped');
-  isFlipped = !isFlipped;
-  document.getElementById('rating-prompt').style.display = isFlipped ? '' : 'none';
 }
 
-// ── Navigation ────────────────────────────────────────────────────────────
 function nextCard() {
-  if (currentIdx < deck.length - 1) { currentIdx++; renderCard(); }
-  else { showDone(); }
+  if (currentIndex < flashcards.length - 1) {
+    currentIndex++;
+    renderCard();
+  }
 }
+
 function prevCard() {
-  if (currentIdx > 0) { currentIdx--; renderCard(); }
-}
-
-// ── Rating ────────────────────────────────────────────────────────────────
-function rateCard(rating) {
-  const card = deck[currentIdx];
-  if (!card) return;
-
-  ratings[card.id] = rating;
-  updateSummaryBadges();
-  highlightRatingBtn(rating);
-
-  // Persist to server
-  fetch(rateUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-    body: JSON.stringify({ flashcard_id: card.id, rating })
-  }).catch(() => {}); // silent on error — local state already updated
-
-  // Advance automatically
-  setTimeout(nextCard, 300);
-}
-
-// ── Filter deck ───────────────────────────────────────────────────────────
-function applyFilter(filter) {
-  document.getElementById('done-banner').style.display = 'none';
-  document.getElementById('flashcard-app')
-    .querySelectorAll('.flashcard, .d-flex.justify-content-center, #rating-prompt')
-    .forEach(el => el.style.display = '');
-
-  deck = filter === 'all'
-    ? [...allCards]
-    : allCards.filter(c => (ratings[c.id] || '') === filter);
-
-  if (!deck.length) {
-    document.getElementById('filter-label').textContent =
-      'No ' + (filter || 'unrated') + ' cards.';
-    showDone();
-    return;
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderCard();
   }
-  document.getElementById('filter-label').textContent =
-    filter ? filter.charAt(0).toUpperCase() + filter.slice(1) + ' only' : '';
-  currentIdx = 0;
-  renderCard();
 }
 
-// ── Shuffle ───────────────────────────────────────────────────────────────
-function shuffleCards() {
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  currentIdx = 0;
-  renderCard();
-}
-
-// ── Completion ────────────────────────────────────────────────────────────
-function showDone() {
-  const counts = { easy: 0, medium: 0, hard: 0 };
-  deck.forEach(c => { if (ratings[c.id]) counts[ratings[c.id]]++; });
-  const banner = document.getElementById('done-banner');
-  document.getElementById('done-stats').textContent =
-    counts.easy + ' easy · ' + counts.medium + ' medium · ' + counts.hard + ' hard';
-  document.getElementById('retry-hard-btn').style.display =
-    (counts.hard > 0) ? '' : 'none';
-  banner.style.display = '';
-}
-
-function restartDeck() {
-  document.getElementById('done-banner').style.display = 'none';
-  applyFilter('all');
-}
-
-// ── Keyboard shortcuts ────────────────────────────────────────────────────
-document.addEventListener('keydown', function(e) {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-  if (e.code === 'Space')      { e.preventDefault(); flipCard(); }
-  if (e.code === 'ArrowRight') { nextCard(); }
-  if (e.code === 'ArrowLeft')  { prevCard(); }
-  if (e.key  === '1')          { if (isFlipped) rateCard('easy'); }
-  if (e.key  === '2')          { if (isFlipped) rateCard('medium'); }
-  if (e.key  === '3')          { if (isFlipped) rateCard('hard'); }
-});
-document.getElementById('flashcard')?.addEventListener('keydown', e => {
-  if (e.code === 'Enter') flipCard();
-});
-
-// ── Init ──────────────────────────────────────────────────────────────────
-// Honour ?filter= query param for direct links from flashcard_browse
-const urlFilter = new URLSearchParams(window.location.search).get('filter') || 'all';
-applyFilter(urlFilter);
+if (flashcards.length > 0) renderCard();
 </script>
-{% endblock %}
+{% endblock extra_js %}

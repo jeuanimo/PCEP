@@ -3,6 +3,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
+from core.admin_utils import score_colour
 from .models import StudySession, TopicProgress
 
 
@@ -49,20 +50,15 @@ class TopicProgressAdmin(admin.ModelAdmin):
 
     @admin.display(description="Confidence")
     def confidence_bar(self, obj):
-        conf = obj.confidence
-        if conf >= 80:
-            colour = "#198754"
-        elif conf >= 40:
-            colour = "#ffc107"
-        else:
-            colour = "#dc3545"
-        bar = (
-            f'<div style="background:#e9ecef;border-radius:4px;width:120px;height:10px">'
-            f'<div style="background:{colour};width:{conf}%;height:100%;border-radius:4px"></div>'
-            f'</div>'
-            f'<small style="color:{colour}">{conf}</small>'
+        conf   = obj.confidence
+        colour = score_colour(conf)
+        return format_html(
+            '<div style="background:#e9ecef;border-radius:4px;width:120px;height:10px">'
+            '<div style="background:{};width:{}%;height:100%;border-radius:4px"></div>'
+            '</div>'
+            '<small style="color:{}">{}</small>',
+            colour, conf, colour, conf,
         )
-        return format_html(bar)
 
 
 # ── StudySession ───────────────────────────────────────────────────────────

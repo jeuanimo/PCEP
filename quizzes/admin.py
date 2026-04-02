@@ -1,8 +1,8 @@
 """Admin for the quizzes app — questions, choices, attempts, and answers."""
 
 from django.contrib import admin
-from django.utils.html import format_html
 
+from core.admin_utils import coloured_score
 from .models import AnswerChoice, Question, QuizAttempt, UserAnswer
 
 
@@ -131,11 +131,7 @@ class QuizAttemptAdmin(admin.ModelAdmin):
 
     @admin.display(description="Score")
     def score_badge(self, obj):
-        colour = "#198754" if obj.is_passed else "#dc3545"
-        return format_html(
-            '<span style="color:{};font-weight:600">{:.0f}%</span>',
-            colour, obj.score,
-        )
+        return coloured_score(obj.score)
 
 
 # ── UserAnswer ─────────────────────────────────────────────────────────────

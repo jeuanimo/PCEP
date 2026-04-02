@@ -1,70 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Code Labs — PCEP Prep Coach{% endblock %}
-
+{% block title %}Code Labs — PCEP Prep Coach{% endblock title %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-  <div>
-    <h1 class="mb-1"><i class="bi bi-terminal me-2"></i>Coding Labs</h1>
-    <p class="text-muted mb-0">Practice writing Python code. Each challenge tests a concept from the PCEP exam.</p>
-  </div>
-  {% if user.is_authenticated %}
-  <span class="badge bg-success fs-6 px-3 py-2">
-    <i class="bi bi-check-circle me-1"></i>{{ completed_ids|length }} / {{ challenges|length }} solved
-  </span>
-  {% endif %}
-</div>
+<h1 class="mb-4"><i class="bi bi-terminal me-2"></i>Coding Labs</h1>
+<p class="text-muted mb-4">Practice writing Python code. Each lab tests a specific concept from the PCEP exam.</p>
 
-{# Difficulty filter #}
-<div class="d-flex gap-2 mb-4 flex-wrap">
-  <button class="btn btn-sm btn-outline-secondary filter-pill active" onclick="filterDiff('all', this)">All</button>
-  <button class="btn btn-sm btn-outline-success  filter-pill" onclick="filterDiff('easy', this)">Easy</button>
-  <button class="btn btn-sm btn-outline-warning  filter-pill" onclick="filterDiff('medium', this)">Medium</button>
-  <button class="btn btn-sm btn-outline-danger   filter-pill" onclick="filterDiff('hard', this)">Hard</button>
-</div>
-
-<div class="row g-3" id="challenge-grid">
+<div class="row g-3">
   {% for challenge in challenges %}
-  <div class="col-md-6 col-lg-4 challenge-card" data-diff="{{ challenge.difficulty }}">
+  <div class="col-md-6 col-lg-4">
     <a href="{% url 'labs:challenge_detail' challenge.pk %}" class="text-decoration-none">
       <div class="card card-coach h-100 p-3">
-        <div class="card-body p-0">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="badge
-              {% if challenge.difficulty == 'easy' %}bg-easy
-              {% elif challenge.difficulty == 'medium' %}bg-medium
-              {% else %}bg-hard{% endif %}">
-              {{ challenge.get_difficulty_display }}
-            </span>
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-1">{{ challenge.title }}</h5>
             {% if challenge.pk in completed_ids %}
-            <span class="badge bg-success-subtle text-success">
-              <i class="bi bi-check-circle-fill me-1"></i>Solved
-            </span>
+            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Solved</span>
+            {% elif challenge.pk in attempted_ids %}
+            <span class="badge bg-warning text-dark"><i class="bi bi-pencil"></i> In Progress</span>
             {% endif %}
           </div>
-          <h5 class="fw-semibold mb-1">{{ challenge.title }}</h5>
-          <p class="text-muted small mb-2">{{ challenge.description|striptags|truncatewords:18 }}</p>
-          <small class="text-muted"><i class="bi bi-tag me-1"></i>{{ challenge.topic.name }}</small>
+          <span class="badge {% if challenge.difficulty == 'easy' %}bg-success{% elif challenge.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %} mb-2">
+            {% if challenge.difficulty == 'easy' %}🟢 Easy{% elif challenge.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
+          </span>
+          <p class="text-muted small mb-0">{{ challenge.description|truncatewords:15 }}</p>
+          <small class="text-muted">{{ challenge.topic.name }}</small>
         </div>
       </div>
     </a>
   </div>
-  {% empty %}
-  <div class="col-12">
-    <div class="alert alert-info">No challenges available yet — check back soon!</div>
-  </div>
   {% endfor %}
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function filterDiff(diff, btn) {
-  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.challenge-card').forEach(card => {
-    card.style.display = (diff === 'all' || card.dataset.diff === diff) ? '' : 'none';
-  });
-}
-</script>
-{% endblock %}
+{% endblock content %}

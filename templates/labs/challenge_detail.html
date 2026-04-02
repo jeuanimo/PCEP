@@ -1,115 +1,256 @@
 {% extends "base.html" %}
-{% block title %}{{ challenge.title }} — Code Lab{% endblock %}
+{% block title %}{{ challenge.title }} — Code Lab{% endblock title %}
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="{% url 'labs:challenge_list' %}">Code Labs</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'learning:topic_detail' challenge.topic.pk %}">{{ challenge.topic.name }}</a></li>
     <li class="breadcrumb-item active">{{ challenge.title }}</li>
   </ol>
 </nav>
 
 <div class="row g-4">
-  <!-- Problem description -->
+  {# ── Left column: Problem + hints + history ────────────────────── #}
   <div class="col-lg-5">
     <div class="card card-coach p-4">
-      <h4 class="mb-3">{{ challenge.title }}</h4>
-      <span class="badge mb-3
-        {% if challenge.difficulty == 'easy' %}bg-easy
-        {% elif challenge.difficulty == 'medium' %}bg-medium
-        {% else %}bg-hard{% endif %}">
-        {{ challenge.get_difficulty_display }}
-      </span>
-      <div>{{ challenge.description|safe }}</div>
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h4 class="mb-0">{{ challenge.title }}</h4>
+        {% if has_solved %}
+          <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Solved</span>
+        {% endif %}
+      </div>
+
+      <div class="mb-3">
+        <span class="badge {% if challenge.difficulty == 'easy' %}bg-success{% elif challenge.difficulty == 'medium' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+          {% if challenge.difficulty == 'easy' %}🟢 Easy{% elif challenge.difficulty == 'medium' %}🟡 Medium{% else %}🔴 Hard{% endif %}
+        </span>
+        <span class="badge bg-secondary ms-1">{{ challenge.topic.name }}</span>
+      </div>
+
+      <div class="mb-3">{{ challenge.description|safe }}</div>
 
       {% if challenge.test_input %}
-      <div class="mt-3 p-2 bg-light rounded">
-        <small><strong>Sample input:</strong></small>
+      <div class="p-2 bg-light rounded mb-3">
+        <small class="fw-semibold">Sample Input:</small>
         <pre class="mb-0 mt-1"><code>{{ challenge.test_input }}</code></pre>
       </div>
       {% endif %}
 
-      <div class="mt-3">
-        <button class="btn btn-outline-warning btn-sm" id="hint-btn" onclick="getHint()">
-          <i class="bi bi-lightbulb me-1"></i>Get Hint
-        </button>
+      {% if expected_preview %}
+      <div class="p-2 bg-light rounded mb-3">
+        <small class="fw-semibold">Expected Output (preview):</small>
+        <pre class="mb-0 mt-1"><code>{{ expected_preview }}</code></pre>
+      </div>
+      {% endif %}
+
+      {# ── Hints section ──────────────────────────────────────────── #}
+      <div class="border-top pt-3 mt-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <button class="btn btn-outline-warning btn-sm" id="hint-btn" onclick="getHint()"
+                  {% if hints_available == 0 %}disabled title="Submit at least one attempt to unlock hints"{% endif %}>
+            <i class="bi bi-lightbulb me-1"></i>Get Hint
+            <span class="badge bg-warning text-dark ms-1" id="hint-counter">{{ hints_available }}/3</span>
+          </button>
+          {% if not has_solved and attempts_until_reveal > 0 %}
+          <small class="text-muted">Solution in {{ attempts_until_reveal }} more attempt{{ attempts_until_reveal|pluralize }}</small>
+          {% endif %}
+        </div>
         <div id="hint-area" class="mt-2"></div>
       </div>
     </div>
 
-    <!-- Past attempts -->
+    {# ── Solution explanation (revealed) ────────────────────────── #}
+    {% if show_solution %}
+    <div class="card card-coach border-success p-4 mt-3" id="solution-panel">
+      <h5 class="text-success mb-3"><i class="bi bi-mortarboard me-2"></i>Solution Explanation</h5>
+      <div class="mb-3">{{ challenge.solution_explanation|linebreaksbr }}</div>
+      {% if show_solution_code %}
+      <details>
+        <summary class="fw-semibold text-primary mb-2 clickable">View Reference Solution</summary>
+        <pre class="bg-dark text-light p-3 rounded"><code>{{ challenge.solution_code }}</code></pre>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# ── Past attempts ──────────────────────────────────────────── #}
     {% if past_attempts %}
     <div class="card card-coach p-3 mt-3">
-      <h6>Recent Attempts</h6>
+      <h6 class="mb-2"><i class="bi bi-clock-history me-1"></i>Your Attempts ({{ total_attempts }})</h6>
       {% for a in past_attempts %}
-      <div class="d-flex justify-content-between small border-bottom py-1">
-        <span>{% if a.is_correct %}<i class="bi bi-check-circle text-success"></i>{% else %}<i class="bi bi-x-circle text-danger"></i>{% endif %} {{ a.submitted_at|timesince }} ago</span>
+      <div class="border-bottom py-2 {% if a.is_correct %}bg-success bg-opacity-10{% endif %}">
+        <div class="d-flex justify-content-between align-items-center">
+          <span>
+            {% if a.is_correct %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+            {% else %}
+              <i class="bi bi-x-circle-fill text-danger"></i>
+            {% endif %}
+            <small class="text-muted ms-1">{{ a.submitted_at|timesince }} ago</small>
+          </span>
+          <span>
+            {% if a.hints_used %}<small class="text-muted"><i class="bi bi-lightbulb"></i> {{ a.hints_used }}</small>{% endif %}
+            {% if a.time_taken_seconds %}<small class="text-muted ms-2"><i class="bi bi-stopwatch"></i> {{ a.time_taken_seconds }}s</small>{% endif %}
+          </span>
+        </div>
+        {% if a.error_message %}
+        <small class="text-danger d-block mt-1"><code>{{ a.error_message|truncatechars:120 }}</code></small>
+        {% endif %}
+        <details class="mt-1">
+          <summary class="small text-primary clickable">View submitted code</summary>
+          <pre class="bg-light p-2 rounded mt-1 small mb-0"><code>{{ a.submitted_code }}</code></pre>
+        </details>
       </div>
       {% endfor %}
     </div>
     {% endif %}
   </div>
 
-  <!-- Code editor -->
+  {# ── Right column: Code editor + output ────────────────────────── #}
   <div class="col-lg-7">
     <div class="card card-coach p-3">
-      <h5 class="mb-2"><i class="bi bi-code-slash me-1"></i>Your Code</h5>
-      <textarea id="code-editor" class="code-editor w-100" rows="12">{{ challenge.starter_code }}</textarea>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0"><i class="bi bi-code-slash me-1"></i>Your Code</h5>
+        <button class="btn btn-outline-secondary btn-sm" onclick="resetCode()" title="Reset to starter code">
+          <i class="bi bi-arrow-counterclockwise"></i> Reset
+        </button>
+      </div>
+      {{ form.code }}
       <div class="d-flex justify-content-between align-items-center mt-3">
         <button class="btn btn-primary btn-lg" id="run-btn" onclick="submitCode()">
           <i class="bi bi-play-fill me-1"></i>Run Code
         </button>
         <div id="result-badge"></div>
       </div>
+      {{ form.time_taken }}
     </div>
 
-    <!-- Output area -->
-    <div class="card card-coach p-3 mt-3" id="output-card" style="display:none;">
-      <h6>Output</h6>
+    {# ── Output area (hidden until first run) ─────────────────────── #}
+    <div class="card card-coach p-3 mt-3 d-none-initial" id="output-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Output</h6>
+        <small class="text-muted" id="attempt-counter"></small>
+      </div>
       <pre id="output-area" class="bg-dark text-light p-3 rounded mb-0"></pre>
+      <div id="error-area" class="mt-2 d-none-initial">
+        <pre class="text-danger bg-danger bg-opacity-10 p-2 rounded mb-0 small" id="error-text"></pre>
+      </div>
       <div id="feedback" class="mt-2"></div>
+    </div>
+
+    {# ── Solution reveal (shown dynamically after AJAX submission) ── #}
+    <div class="card card-coach border-success p-4 mt-3 d-none-initial" id="solution-card">
+      <h5 class="text-success mb-3"><i class="bi bi-mortarboard me-2"></i>Solution Explanation</h5>
+      <div id="solution-explanation-area" class="mb-3"></div>
+      <div id="solution-code-area" class="d-none-initial">
+        <details>
+          <summary class="fw-semibold text-primary mb-2 clickable">View Reference Solution</summary>
+          <pre class="bg-dark text-light p-3 rounded"><code id="solution-code-text"></code></pre>
+        </details>
+      </div>
     </div>
   </div>
 </div>
 
-{% endblock %}
+{% endblock content %}
 
 {% block extra_js %}
 <script>
 let hintNumber = 0;
+let hintsAvailable = {{ hints_available }};
+const maxHints = 3;
 const csrfToken = '{{ csrf_token }}';
+const starterCode = {{ challenge.starter_code|default:"''"|safe }};
+const pageLoadTime = Date.now();
 
+// ── Submit code via AJAX ──────────────────────────────────────────
 function submitCode() {
   const code = document.getElementById('code-editor').value;
   const btn = document.getElementById('run-btn');
+  const timeTaken = Math.round((Date.now() - pageLoadTime) / 1000);
+
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running...';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Running…';
 
   fetch('{% url "labs:submit_code" challenge.pk %}', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-    body: JSON.stringify({code: code})
+    body: JSON.stringify({code: code, time_taken: timeTaken})
   })
   .then(r => r.json())
   .then(data => {
-    document.getElementById('output-card').style.display = 'block';
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+
+    // Show output card
+    const outputCard = document.getElementById('output-card');
+    outputCard.classList.remove('d-none-initial');
     document.getElementById('output-area').textContent = data.actual_output || '(no output)';
+
+    // Attempt counter
+    if (data.attempt_number) {
+      document.getElementById('attempt-counter').textContent = 'Attempt #' + data.attempt_number;
+    }
+
+    // Error display
+    const errorArea = document.getElementById('error-area');
+    if (data.error_message) {
+      errorArea.classList.remove('d-none-initial');
+      document.getElementById('error-text').textContent = data.error_message;
+    } else {
+      errorArea.classList.add('d-none-initial');
+    }
+
+    // Result badge + feedback
     const badge = document.getElementById('result-badge');
     const feedback = document.getElementById('feedback');
+
     if (data.is_correct) {
       badge.innerHTML = '<span class="badge bg-success fs-6">✓ Correct!</span>';
-      feedback.innerHTML = '<div class="alert alert-success mb-0">Great job! Your output matches the expected result.</div>';
+      feedback.innerHTML = '<div class="alert alert-success mb-0"><i class="bi bi-trophy me-1"></i>Great job! Your output matches the expected result.</div>';
+      // Enable all hints for review
+      document.getElementById('hint-btn').disabled = false;
     } else {
       badge.innerHTML = '<span class="badge bg-danger fs-6">✗ Not quite</span>';
-      let msg = '<div class="alert alert-warning mb-0">Your output doesn\'t match. ';
+      let msg = '<div class="alert alert-warning mb-0">';
       if (data.expected_output) {
-        msg += 'Expected: <code>' + data.expected_output.replace(/</g, '&lt;') + '</code>';
+        const escaped = data.expected_output.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        msg += '<strong>Expected:</strong><pre class="mb-0 mt-1"><code>' + escaped + '</code></pre>';
       }
-      msg += ' Try again or use a hint!</div>';
+      if (data.attempts_until_reveal) {
+        msg += '<small class="d-block mt-2 text-muted">Solution reveals in ' + data.attempts_until_reveal + ' more attempt' + (data.attempts_until_reveal !== 1 ? 's' : '') + '</small>';
+      }
+      msg += '</div>';
       feedback.innerHTML = msg;
+
+      // Unlock next hint after each failed attempt
+      if (hintsAvailable < maxHints) {
+        hintsAvailable++;
+        document.getElementById('hint-btn').disabled = false;
+        document.getElementById('hint-counter').textContent = hintsAvailable + '/' + maxHints;
+      }
+    }
+
+    // Solution reveal (from server)
+    if (data.solution_explanation) {
+      const solCard = document.getElementById('solution-card');
+      solCard.classList.remove('d-none-initial');
+      document.getElementById('solution-explanation-area').textContent = data.solution_explanation;
+
+      if (data.solution_code) {
+        document.getElementById('solution-code-area').classList.remove('d-none-initial');
+        document.getElementById('solution-code-text').textContent = data.solution_code;
+      }
+
+      // Also show the server-rendered solution panel
+      const serverPanel = document.getElementById('solution-panel');
+      if (serverPanel) serverPanel.classList.remove('d-none-initial');
     }
   })
   .catch(() => {
-    document.getElementById('feedback').innerHTML = '<div class="alert alert-danger mb-0">Error submitting code.</div>';
+    showError('Network error — please try again.');
   })
   .finally(() => {
     btn.disabled = false;
@@ -117,8 +258,24 @@ function submitCode() {
   });
 }
 
+function showError(msg) {
+  document.getElementById('feedback').innerHTML =
+    '<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-triangle me-1"></i>' +
+    msg.replace(/</g, '&lt;') + '</div>';
+}
+
+// ── Reset to starter code ─────────────────────────────────────────
+function resetCode() {
+  if (confirm('Reset code to the original starter code?')) {
+    document.getElementById('code-editor').value = {{ challenge.starter_code|default:"''"|safe }};
+  }
+}
+
+// ── Progressive hints via AJAX ────────────────────────────────────
 function getHint() {
-  hintNumber = Math.min(hintNumber + 1, 3);
+  if (hintNumber >= hintsAvailable) return;
+  hintNumber = Math.min(hintNumber + 1, maxHints);
+
   fetch('{% url "labs:get_hint" challenge.pk %}', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
@@ -127,21 +284,26 @@ function getHint() {
   .then(r => r.json())
   .then(data => {
     const hintArea = document.getElementById('hint-area');
-    hintArea.textContent = '';
+    // Append hint (don't replace previous ones)
     const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-info mb-0';
+    alertDiv.className = 'alert alert-info mb-2 py-2';
     const icon = document.createElement('i');
-    icon.className = 'bi bi-lightbulb me-1';
+    icon.className = 'bi bi-lightbulb-fill me-1';
     alertDiv.appendChild(icon);
     const strong = document.createElement('strong');
     strong.textContent = 'Hint ' + data.hint_number + ': ';
     alertDiv.appendChild(strong);
     alertDiv.appendChild(document.createTextNode(data.hint));
     hintArea.appendChild(alertDiv);
+
+    // Disable button if all available hints shown
+    if (hintNumber >= hintsAvailable) {
+      document.getElementById('hint-btn').disabled = true;
+    }
   });
 }
 
-// Allow Tab key in textarea
+// ── Tab key inserts spaces in textarea ────────────────────────────
 document.getElementById('code-editor').addEventListener('keydown', function(e) {
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -151,5 +313,13 @@ document.getElementById('code-editor').addEventListener('keydown', function(e) {
     this.selectionStart = this.selectionEnd = start + 4;
   }
 });
+
+// ── Ctrl+Enter shortcut to submit ─────────────────────────────────
+document.getElementById('code-editor').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    submitCode();
+  }
+});
 </script>
-{% endblock %}
+{% endblock extra_js %}

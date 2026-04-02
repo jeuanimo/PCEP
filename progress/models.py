@@ -95,7 +95,10 @@ class TopicProgress(models.Model):
             self.status = "learning"
 
         self.last_practiced = timezone.now()
-        self.save()
+        self.save(update_fields=[
+            "confidence", "status", "correct_count",
+            "incorrect_count", "last_practiced", "updated_at",
+        ])
 
 
 class StudySession(models.Model):

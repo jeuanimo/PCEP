@@ -1,6 +1,6 @@
 """Accounts app — extended user profile with PCEP study metadata."""
-from django.db import models
 from django.conf import settings
+from django.db import models
 from django.utils import timezone
 
 
@@ -91,27 +91,12 @@ class UserProfile(models.Model):
     def compute_readiness(self) -> float:
         """Recalculate and persist the weighted exam readiness score.
 
-        Formula: Σ( domain_avg_confidence × domain.weight )
-        Returns the score (0–100) and saves it to ``exam_readiness_score``.
+        Delegates to ``progress.services.readiness_score`` which is the
+        single authoritative implementation.  Saves the result and returns it.
         """
-        from progress.models import TopicProgress
-        from learning.models import Domain
+        from progress.services import readiness_score
 
-        total = 0.0
-        for domain in Domain.objects.filter(is_active=True):
-            progresses = TopicProgress.objects.filter(
-                user=self.user,
-                topic__domain=domain,
-            )
-            if progresses.exists():
-                avg = progresses.aggregate(
-                    avg=models.Avg("confidence")
-                )["avg"] or 0.0
-            else:
-                avg = 0.0
-            total += avg * domain.weight  # domain.weight is the 0-1 decimal property
-
-        self.exam_readiness_score = round(total, 1)
+        self.exam_readiness_score = readiness_score(self.user)
         self.save(update_fields=["exam_readiness_score"])
         return self.exam_readiness_score
 
