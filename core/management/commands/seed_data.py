@@ -36,34 +36,34 @@ class Command(BaseCommand):
     def _create_domains(self):
         domains = [
             {
-                "name": "Computer Programming and Python Fundamentals",
+                "title": "Computer Programming and Python Fundamentals",
                 "slug": "fundamentals",
                 "order": 1,
-                "weight": 0.18,
+                "weight_percent": 18,
                 "description": "Core concepts: how computers run programs, Python basics, data types, variables, operators, and I/O.",
                 "icon": "bi-cpu",
             },
             {
-                "name": "Control Flow: Conditional Blocks and Loops",
+                "title": "Control Flow: Conditional Blocks and Loops",
                 "slug": "control-flow",
                 "order": 2,
-                "weight": 0.29,
+                "weight_percent": 29,
                 "description": "Decision-making with if/elif/else, iteration with while and for, and flow control with break, continue, and pass.",
                 "icon": "bi-arrow-repeat",
             },
             {
-                "name": "Data Collections: Tuples, Dictionaries, Lists, and Strings",
+                "title": "Data Collections: Tuples, Dictionaries, Lists, and Strings",
                 "slug": "data-collections",
                 "order": 3,
-                "weight": 0.25,
+                "weight_percent": 25,
                 "description": "Working with Python's built-in data structures: lists, tuples, dictionaries, and strings.",
                 "icon": "bi-collection",
             },
             {
-                "name": "Functions and Exceptions",
+                "title": "Functions and Exceptions",
                 "slug": "functions-exceptions",
                 "order": 4,
-                "weight": 0.28,
+                "weight_percent": 28,
                 "description": "Defining functions, parameter passing, scope, recursion, and handling errors with try/except.",
                 "icon": "bi-gear",
             },
@@ -492,11 +492,11 @@ except Exception as e:
                 domain__slug=q_data["domain_slug"],
             )
             q, _ = Question.objects.update_or_create(
+                topic=topic,
                 text=q_data["text"],
+                code_snippet=q_data.get("code", ""),
                 defaults={
-                    "topic": topic,
                     "question_type": q_data["qtype"],
-                    "code_snippet": q_data.get("code", ""),
                     "explanation": q_data.get("explanation", ""),
                     "hint": q_data.get("hint", ""),
                     "difficulty": q_data.get("difficulty", "medium"),
