@@ -54,8 +54,12 @@ class ValidateTests(TestCase):
 
     # ── attribute method calls ───────────────────────────────────────
 
-    def test_attribute_call_blocked(self):
-        self.assertIsNotNone(validate("os.system('ls')"))
+    def test_attribute_call_allowed_for_normal_python(self):
+        self.assertIsNone(validate("nums=[1, 2]\nnums.append(3)\nprint(nums)"))
+
+    def test_import_plus_attribute_call_blocked(self):
+        # Imports are blocked, which also prevents module method abuse.
+        self.assertIsNotNone(validate("import os\nos.system('ls')"))
 
     def test_chr_blocked(self):
         self.assertIsNotNone(validate("chr(65)"))
@@ -100,3 +104,8 @@ class RunUserCodeTests(TestCase):
     def test_empty_output(self):
         out = run_user_code("x = 42", "")
         self.assertEqual(out, "")
+
+    def test_list_append_allowed(self):
+        code = "nums=[1, 2]\nnums.append(3)\nprint(nums)"
+        out = run_user_code(code, "")
+        self.assertEqual(out.strip(), "[1, 2, 3]")

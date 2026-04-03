@@ -1,0 +1,55 @@
+name: Render Keepalive
+
+on:
+  schedule:
+    # Every 10 minutes
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping_primary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render health endpoint (primary)
+        env:
+          RENDER_HEALTHCHECK_URL: ${{ secrets.RENDER_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$RENDER_HEALTHCHECK_URL" ]; then
+            echo "RENDER_HEALTHCHECK_URL secret is not set."
+            exit 1
+          fi
+
+          # Fail job if endpoint is not healthy.
+          status_code=$(curl -s -o /tmp/keepalive_body.txt -w "%{http_code}" "$RENDER_HEALTHCHECK_URL")
+          echo "HTTP status: $status_code"
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 400 ]; then
+            echo "Ping failed. Response body:"
+            cat /tmp/keepalive_body.txt
+            exit 1
+          fi
+          echo "Primary ping successful."
+
+  ping_secondary:
+    runs-on: ubuntu-latest
+    needs: ping_primary
+    steps:
+      - name: Wait 5 minutes for staggered ping
+        run: sleep 300
+
+      - name: Ping Render health endpoint (secondary)
+        env:
+          RENDER_HEALTHCHECK_URL: ${{ secrets.RENDER_HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$RENDER_HEALTHCHECK_URL" ]; then
+            echo "RENDER_HEALTHCHECK_URL secret is not set."
+            exit 1
+          fi
+
+          status_code=$(curl -s -o /tmp/keepalive_body_2.txt -w "%{http_code}" "$RENDER_HEALTHCHECK_URL")
+          echo "HTTP status: $status_code"
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 400 ]; then
+            echo "Ping failed. Response body:"
+            cat /tmp/keepalive_body_2.txt
+            exit 1
+          fi
+          echo "Secondary ping successful."

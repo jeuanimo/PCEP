@@ -3,6 +3,7 @@ import json
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.generic import ListView, DetailView
@@ -77,6 +78,10 @@ class ChallengeDetailView(LoginRequiredMixin, DetailView):
     model = CodingChallenge
     template_name = "labs/challenge_detail.html"
     context_object_name = "challenge"
+
+    @method_decorator(ensure_csrf_cookie)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
         return CodingChallenge.objects.filter(is_active=True).select_related("topic", "domain")
@@ -293,3 +298,31 @@ class GetHintView(LoginRequiredMixin, View):
             latest.save(update_fields=["hints_used"])
 
         return JsonResponse({"hint": hint_text, "hint_number": hint_num})
+
+
+@method_decorator(
+    ratelimit(key="user", rate="10/m", method="POST", block=True),
+    name="post",
+)
+class ResetChallengeProgressView(LoginRequiredMixin, View):
+    """Reset the current user's attempts for one challenge."""
+
+    def post(self, request, pk):
+        challenge = get_object_or_404(CodingChallenge, pk=pk, is_active=True)
+        deleted_count, _ = CodingAttempt.objects.filter(
+            user=request.user,
+            challenge=challenge,
+        ).delete()
+
+        from progress.services import (
+            invalidate_user_progress_cache,
+            recompute_topic_progress,
+        )
+
+        recompute_topic_progress(request.user, challenge.topic)
+        invalidate_user_progress_cache(request.user)
+
+        return JsonResponse({
+            "ok": True,
+            "deleted_attempts": deleted_count,
+        })

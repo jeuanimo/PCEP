@@ -10,11 +10,11 @@ from . import services
 User = get_user_model()
 
 
-_TEST_PASSWORD = "test-only-not-real"  # noqa: S105
+_TEST_CREDENTIAL = "test-only-not-real"  # noqa: S105
 
 
 def _make_user(username="testuser"):
-    return User.objects.create_user(username=username, password=_TEST_PASSWORD)
+    return User.objects.create_user(username=username, password=_TEST_CREDENTIAL)
 
 
 def _make_domain(order=1, weight=25):

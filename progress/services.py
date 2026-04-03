@@ -204,6 +204,13 @@ def get_recent_activity(user: "AbstractUser", limit: int = 8) -> list[dict]:
 
     items: list[dict] = []
 
+    def _quiz_color(score: int) -> str:
+        if score >= 70:
+            return "success"
+        if score >= 50:
+            return "warning"
+        return "danger"
+
     for qa in (
         QuizAttempt.objects.filter(user=user, finished_at__isnull=False)
         .select_related("topic", "domain")
@@ -221,11 +228,7 @@ def get_recent_activity(user: "AbstractUser", limit: int = 8) -> list[dict]:
                 "label": f"{qa.get_mode_display()}{scope}",
                 "score": qa.score,
                 "icon": "bi-pencil-square",
-                "color": (
-                    "success" if qa.score >= 70
-                    else "warning" if qa.score >= 50
-                    else "danger"
-                ),
+                "color": _quiz_color(qa.score),
                 "url": reverse("quizzes:quiz_results", args=[qa.pk]),
                 "passed": qa.is_passed,
             }
@@ -373,7 +376,7 @@ def record_lesson_read(user: "AbstractUser", topic: "Topic") -> None:
     """
     from .models import TopicProgress
 
-    tp, created = TopicProgress.objects.get_or_create(user=user, topic=topic)
+    tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
     if tp.status == "not_started":
         tp.confidence = min(100, tp.confidence + 10)
         tp.status = "learning"
@@ -392,3 +395,75 @@ def record_lab_solved(user: "AbstractUser", challenge: "CodingChallenge") -> Non
     tp.record_answer(is_correct=True)        # +bump from algorithm
     tp.confidence = min(100, tp.confidence + 5)  # lab bonus
     tp.save(update_fields=["confidence", "updated_at"])
+
+
+def recompute_topic_progress(user: "AbstractUser", topic: "Topic") -> None:
+    """Rebuild TopicProgress for one topic from quiz/lab history.
+
+    This is useful when a user resets lab attempts and we need confidence,
+    counts, and status to reflect remaining activity accurately.
+    """
+    from quizzes.models import UserAnswer
+    from labs.models import CodingAttempt
+    from .models import TopicProgress
+
+    events: list[tuple] = []
+
+    quiz_events = UserAnswer.objects.filter(
+        user=user,
+        question__topic=topic,
+    ).values_list("answered_at", "is_correct")
+    for answered_at, is_correct in quiz_events:
+        events.append((answered_at, bool(is_correct), False))
+
+    lab_events = CodingAttempt.objects.filter(
+        user=user,
+        challenge__topic=topic,
+    ).values_list("submitted_at", "is_correct")
+    for submitted_at, is_correct in lab_events:
+        events.append((submitted_at, bool(is_correct), True))
+
+    events.sort(key=lambda item: item[0])
+
+    confidence = 0
+    correct_count = 0
+    incorrect_count = 0
+    last_practiced = None
+
+    for timestamp, is_correct, is_lab_event in events:
+        last_practiced = timestamp
+        if is_correct:
+            correct_count += 1
+            bump = max(2, (100 - confidence) // 5)
+            confidence = min(100, confidence + bump)
+            if is_lab_event:
+                confidence = min(100, confidence + 5)  # same bonus as record_lab_solved
+        else:
+            incorrect_count += 1
+            drop = max(3, confidence // 8)
+            confidence = max(0, confidence - drop)
+
+    total_attempts = correct_count + incorrect_count
+    if confidence >= 80:
+        status = "mastered"
+    elif confidence >= 40:
+        status = "practicing"
+    elif total_attempts > 0:
+        status = "learning"
+    else:
+        status = "not_started"
+
+    tp, _ = TopicProgress.objects.get_or_create(user=user, topic=topic)
+    tp.confidence = confidence
+    tp.correct_count = correct_count
+    tp.incorrect_count = incorrect_count
+    tp.last_practiced = last_practiced
+    tp.status = status
+    tp.save(update_fields=[
+        "confidence",
+        "correct_count",
+        "incorrect_count",
+        "last_practiced",
+        "status",
+        "updated_at",
+    ])

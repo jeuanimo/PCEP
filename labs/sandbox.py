@@ -99,6 +99,24 @@ _FORBIDDEN_AST_CALLS: frozenset[str] = _FORBIDDEN_BUILTINS | frozenset({
 })
 
 
+def _validate_ast_node(node: ast.AST) -> str | None:
+    """Return an error string for a forbidden AST node, otherwise None."""
+    if isinstance(node, (ast.Import, ast.ImportFrom)):
+        return "Forbidden: import statements are not allowed"
+
+    if isinstance(node, ast.Attribute) and node.attr.startswith("__"):
+        return f"Forbidden: access to '{node.attr}' is not allowed"
+
+    if isinstance(node, ast.Name) and node.id.startswith("__"):
+        return f"Forbidden: use of '{node.id}' is not allowed"
+
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Name) and node.func.id in _FORBIDDEN_AST_CALLS:
+            return f"Forbidden: '{node.func.id}()' is not allowed"
+
+    return None
+
+
 def validate(code: str) -> str | None:
     """Parse ``code`` with the AST and return an error string, or None if safe.
 
@@ -118,29 +136,9 @@ def validate(code: str) -> str | None:
         return None  # Let the subprocess report SyntaxError naturally
 
     for node in ast.walk(tree):
-        # Block all imports
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            return "Forbidden: import statements are not allowed"
-
-        # Block dunder attribute access (obj.__class__, obj.__mro__, etc.)
-        if isinstance(node, ast.Attribute) and node.attr.startswith("__"):
-            return f"Forbidden: access to '{node.attr}' is not allowed"
-
-        # Block dunder names used directly (__builtins__, __import__, etc.)
-        if isinstance(node, ast.Name) and node.id.startswith("__"):
-            return f"Forbidden: use of '{node.id}' is not allowed"
-
-        # Block forbidden builtin calls
-        if isinstance(node, ast.Call):
-            # Direct calls: open(...), eval(...), type(...)
-            if isinstance(node.func, ast.Name) and node.func.id in _FORBIDDEN_AST_CALLS:
-                return f"Forbidden: '{node.func.id}()' is not allowed"
-            # Attribute calls via a name: os.system(...), subprocess.run(...)
-            if isinstance(node.func, ast.Attribute):
-                return (
-                    f"Forbidden: method calls via attribute access "
-                    f"('{node.func.attr}') are not allowed"
-                )
+        error = _validate_ast_node(node)
+        if error:
+            return error
 
     return None
 
