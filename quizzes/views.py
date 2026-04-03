@@ -271,6 +271,7 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx  = super().get_context_data(**kwargs)
         user = self.request.user
+        highlighted_qid = self.request.GET.get("question", "").strip()
 
         wrong_ids = set(
             UserAnswer.objects.filter(user=user, is_correct=False)
@@ -332,6 +333,7 @@ class ReviewMistakesView(LoginRequiredMixin, TemplateView):
 
         ctx["grouped"]      = grouped
         ctx["missed_count"] = len(never_right_ids)
+        ctx["highlighted_qid"] = highlighted_qid
         return ctx
 
 

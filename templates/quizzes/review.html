@@ -4,38 +4,60 @@
 <h1 class="mb-4"><i class="bi bi-arrow-repeat me-2"></i>Review Mistakes</h1>
 <p class="text-muted mb-4">Study the questions you got wrong. Understanding mistakes is the fastest path to mastery.</p>
 
-{% if missed_answers %}
-{% for ua in missed_answers %}
-<div class="card card-coach p-4 mb-3">
-  <div class="d-flex justify-content-between align-items-start">
-    <div>
-      <span class="badge bg-secondary mb-2">{{ ua.question.topic.domain.name }} → {{ ua.question.topic.name }}</span>
-      <h5>{{ ua.question.text }}</h5>
-      {% if ua.question.code_snippet %}
-      <pre class="bg-dark text-light p-3 rounded"><code>{{ ua.question.code_snippet }}</code></pre>
+{% if grouped %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle">
+    {{ missed_count }} unresolved mistake{{ missed_count|pluralize }}
+  </span>
+  <a href="{% url 'quizzes:review_quiz' %}" class="btn btn-outline-danger btn-sm">
+    <i class="bi bi-lightning-charge me-1"></i>Practice Missed Questions
+  </a>
+</div>
+
+{% for group in grouped %}
+  <h4 class="mt-4 mb-3">
+    <i class="bi bi-diagram-3 me-2"></i>{{ group.domain.title }}
+  </h4>
+
+  {% for topic_group in group.topics %}
+    <div class="mb-3">
+      <h5 class="mb-2">{{ topic_group.topic.name }}</h5>
+      <small class="text-muted">{{ topic_group.miss_count }} missed item{{ topic_group.miss_count|pluralize }}</small>
+    </div>
+
+    {% for ua in topic_group.answers %}
+    <div id="q-{{ ua.question_id }}" class="card card-coach p-4 mb-3 {% if highlighted_qid == ua.question_id|stringformat:'s' %}border border-warning{% endif %}">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <span class="badge bg-secondary mb-2">{{ ua.question.topic.domain.title }} → {{ ua.question.topic.name }}</span>
+          <h5>{{ ua.question.text }}</h5>
+          {% if ua.question.code_snippet %}
+          <pre class="bg-dark text-light p-3 rounded"><code>{{ ua.question.code_snippet }}</code></pre>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <strong>Correct answer:</strong>
+        {% for c in ua.question.choices.all %}
+          {% if c.is_correct %}<span class="text-success fw-bold">{{ c.text }}</span>{% endif %}
+        {% endfor %}
+      </div>
+
+      {% if ua.question.explanation %}
+      <div class="mt-2 p-2 bg-light rounded">
+        <small><strong>Explanation:</strong> {{ ua.question.explanation }}</small>
+      </div>
+      {% endif %}
+
+      {% if ua.question.hint %}
+      <div class="mt-2">
+        <small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Hint: {{ ua.question.hint }}</small>
+      </div>
       {% endif %}
     </div>
-  </div>
-
-  <div class="mt-2">
-    <strong>Correct answer:</strong>
-    {% for c in ua.question.choices.all %}
-      {% if c.is_correct %}<span class="text-success fw-bold">{{ c.text }}</span>{% endif %}
     {% endfor %}
-  </div>
-
-  {% if ua.question.explanation %}
-  <div class="mt-2 p-2 bg-light rounded">
-    <small><strong>Explanation:</strong> {{ ua.question.explanation }}</small>
-  </div>
-  {% endif %}
-
-  {% if ua.question.hint %}
-  <div class="mt-2">
-    <small class="text-muted"><i class="bi bi-lightbulb me-1"></i>Hint: {{ ua.question.hint }}</small>
-  </div>
-  {% endif %}
-</div>
+  {% endfor %}
 {% endfor %}
 {% else %}
 <div class="alert alert-success">
