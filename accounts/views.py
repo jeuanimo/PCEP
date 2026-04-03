@@ -117,6 +117,7 @@ class InviteCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
 
         email = form.cleaned_data["email"].strip().lower()
         existing = Invitation.objects.filter(email__iexact=email).first()
+        previous_invite_state = None
 
         if existing and existing.is_used:
             messages.error(
@@ -126,6 +127,11 @@ class InviteCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
             return self.form_invalid(form)
 
         if existing:
+            previous_invite_state = {
+                "token": existing.token,
+                "is_active": existing.is_active,
+                "invited_by_id": existing.invited_by_id,
+            }
             # Refresh token so old link is invalidated, then resend
             existing.token = _uuid.uuid4()
             existing.is_active = True
@@ -141,22 +147,41 @@ class InviteCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
         register_url = self.request.build_absolute_uri(
             reverse("accounts:register") + f"?token={invitation.token}"
         )
-        send_mail(
-            subject="You're invited to PCEP Prep Coach",
-            message=render_to_string(
-                "accounts/email/invite.txt",
-                {
-                    "invited_by": (
-                        self.request.user.get_full_name()
-                        or self.request.user.username
-                    ),
-                    "register_url": register_url,
-                },
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        try:
+            send_mail(
+                subject="You're invited to PCEP Prep Coach",
+                message=render_to_string(
+                    "accounts/email/invite.txt",
+                    {
+                        "invited_by": (
+                            self.request.user.get_full_name()
+                            or self.request.user.username
+                        ),
+                        "register_url": register_url,
+                    },
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception:
+            # Keep invitation state consistent when SMTP config/provider fails.
+            if previous_invite_state is not None:
+                invitation.token = previous_invite_state["token"]
+                invitation.is_active = previous_invite_state["is_active"]
+                invitation.invited_by_id = previous_invite_state["invited_by_id"]
+                invitation.save(update_fields=["token", "is_active", "invited_by"])
+            else:
+                invitation.delete()
+
+            error_msg = (
+                "Invite email could not be sent. Check email settings "
+                "(EMAIL_HOST_USER / EMAIL_HOST_PASSWORD) and try again."
+            )
+            messages.error(self.request, error_msg)
+            form.add_error(None, error_msg)
+            return self.form_invalid(form)
+
         messages.success(self.request, f"Invitation sent to {email}.")
         return super().form_valid(form)
 
