@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bleach_tags %}
 {% block title %}Learning Paths — PCEP Prep Coach{% endblock title %}
 {% block content %}
 <h1 class="mb-4"><i class="bi bi-book me-2"></i>PCEP Exam Domains</h1>
@@ -12,7 +13,7 @@
         <div class="d-flex justify-content-between align-items-start">
           <div>
             <h4 class="mb-1">{{ domain.name }}</h4>
-            <p class="text-muted mb-2">{{ domain.description|truncatewords:20 }}</p>
+            <p class="text-muted mb-2">{{ domain.description|bleach_safe|truncatewords_html:20 }}</p>
             <span class="badge bg-primary">{{ domain.weight|floatformat:0 }}% of exam</span>
             <span class="badge bg-secondary">{{ domain.topics.count }} topics</span>
           </div>

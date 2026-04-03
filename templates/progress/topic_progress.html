@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bleach_tags %}
 {% block title %}{{ topic.name }} Progress — PCEP Prep Coach{% endblock title %}
 
 {% block content %}
@@ -27,7 +28,7 @@
       </div>
       <h2 class="mb-1">{{ topic.name }}</h2>
       {% if topic.description %}
-      <p class="text-muted mb-0">{{ topic.description }}</p>
+      <p class="text-muted mb-0">{{ topic.description|bleach_safe }}</p>
       {% endif %}
     </div>
     <div class="col-md-4 text-md-end mt-3 mt-md-0">
