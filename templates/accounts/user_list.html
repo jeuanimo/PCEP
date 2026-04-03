@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Registered Users — PCEP Prep Coach{% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-people me-2"></i>Registered Users</h2>
+  <a href="{% url 'accounts:invite_create' %}" class="btn btn-primary">
+    <i class="bi bi-envelope-plus me-1"></i>Invite Someone
+  </a>
+</div>
+
+{% if users %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Signed Up</th>
+        <th>Last Sign In</th>
+        <th>Staff</th>
+        <th>Active</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>
+          <i class="bi bi-person-circle me-1 text-muted"></i>
+          <strong>{{ u.username }}</strong>
+          {% if u == request.user %}<span class="badge bg-primary ms-1">you</span>{% endif %}
+        </td>
+        <td>{{ u.email|default:"—" }}</td>
+        <td>{{ u.date_joined|date:"M j, Y" }}</td>
+        <td>
+          {% if u.last_login %}
+            {{ u.last_login|date:"M j, Y" }}
+          {% else %}
+            <span class="text-muted">Never</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.is_staff %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.is_active %}
+            <i class="bi bi-check-circle-fill text-success"></i>
+          {% else %}
+            <i class="bi bi-x-circle-fill text-danger"></i>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<nav>
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">No users have registered yet.</div>
+{% endif %}
+{% endblock content %}

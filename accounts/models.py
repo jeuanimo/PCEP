@@ -1,4 +1,6 @@
 """Accounts app — extended user profile with PCEP study metadata."""
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -107,3 +109,40 @@ class UserProfile(models.Model):
             return None
         delta = self.target_exam_date - timezone.now().date()
         return max(0, delta.days)
+
+
+class Invitation(models.Model):
+    """A staff-issued email invitation required to create an account."""
+
+    email = models.EmailField(unique=True)
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_invitations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text="Set when the invitee completes registration."
+    )
+    is_active = models.BooleanField(
+        default=True, help_text="Uncheck to revoke this invitation."
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        if self.accepted_at:
+            status = "accepted"
+        elif self.is_active:
+            status = "pending"
+        else:
+            status = "revoked"
+        return f"{self.email} ({status})"
+
+    @property
+    def is_used(self) -> bool:
+        return self.accepted_at is not None

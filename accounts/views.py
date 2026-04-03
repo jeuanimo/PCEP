@@ -1,12 +1,20 @@
-from django.contrib.auth import login
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model, login
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as AuthLogoutView
+from django.core.mail import send_mail
 from django.db import models
-from django.urls import reverse_lazy
-from django.views.generic import CreateView, TemplateView
+from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
+from django.views.generic import CreateView, FormView, ListView, TemplateView
 
-from .forms import RegisterForm
-from .models import UserProfile
+from .forms import InviteForm, RegisterForm
+from .models import Invitation, UserProfile
+
+User = get_user_model()
 
 
 class RegisterView(CreateView):
@@ -14,9 +22,51 @@ class RegisterView(CreateView):
     template_name = "accounts/register.html"
     success_url = reverse_lazy("progress:dashboard")
 
+    def _get_invitation(self, token_str: str):
+        if not token_str:
+            return None
+        try:
+            return Invitation.objects.get(
+                token=token_str, is_active=True, accepted_at__isnull=True
+            )
+        except (Invitation.DoesNotExist, ValueError):
+            return None
+
+    def _token_str(self) -> str:
+        if self.request.method == "POST":
+            return self.request.POST.get("token", "")
+        return self.request.GET.get("token", "")
+
+    def get(self, request, *args, **kwargs):
+        if not self._get_invitation(self._token_str()):
+            return render(request, "accounts/register_closed.html", status=403)
+        return super().get(request, *args, **kwargs)
+
+    def get_initial(self):
+        token_str = self._token_str()
+        invitation = self._get_invitation(token_str)
+        if invitation:
+            return {"email": invitation.email, "token": str(invitation.token)}
+        return {}
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self._get_invitation(self._token_str()):
+            form.fields["email"].widget.attrs["readonly"] = True
+        return form
+
     def form_valid(self, form):
+        token_str = str(form.cleaned_data.get("token") or "")
+        invitation = self._get_invitation(token_str)
+        if invitation is None:
+            form.add_error(None, "This invitation link is no longer valid.")
+            return self.form_invalid(form)
+        if form.cleaned_data["email"].strip().lower() != invitation.email.strip().lower():
+            form.add_error("email", "Email must match the address this invitation was sent to.")
+            return self.form_invalid(form)
         response = super().form_valid(form)
-        # Create profile and auto-login
+        invitation.accepted_at = timezone.now()
+        invitation.save(update_fields=["accepted_at"])
         UserProfile.objects.get_or_create(user=self.object)
         login(self.request, self.object)
         return response
@@ -29,6 +79,100 @@ class LoginView(AuthLoginView):
 
 class LogoutView(AuthLogoutView):
     next_page = reverse_lazy("core:home")
+
+
+User = get_user_model()
+
+
+class UserListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Staff-only view: all registered users with sign-up and last-login info."""
+
+    model = User
+    template_name = "accounts/user_list.html"
+    context_object_name = "users"
+    paginate_by = 25
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_queryset(self):
+        return (
+            User.objects.select_related("profile")
+            .order_by("-date_joined")
+        )
+
+
+class InviteCreateView(LoginRequiredMixin, UserPassesTestMixin, FormView):
+    """Staff-only: create and email an invitation link."""
+
+    template_name = "accounts/invite_create.html"
+    form_class = InviteForm
+    success_url = reverse_lazy("accounts:invite_list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def form_valid(self, form):
+        import uuid as _uuid
+
+        email = form.cleaned_data["email"].strip().lower()
+        existing = Invitation.objects.filter(email__iexact=email).first()
+
+        if existing and existing.is_used:
+            messages.error(
+                self.request,
+                f"{email} has already accepted an invitation and registered.",
+            )
+            return self.form_invalid(form)
+
+        if existing:
+            # Refresh token so old link is invalidated, then resend
+            existing.token = _uuid.uuid4()
+            existing.is_active = True
+            existing.invited_by = self.request.user
+            existing.save(update_fields=["token", "is_active", "invited_by"])
+            invitation = existing
+        else:
+            invitation = Invitation.objects.create(
+                email=email,
+                invited_by=self.request.user,
+            )
+
+        register_url = self.request.build_absolute_uri(
+            reverse("accounts:register") + f"?token={invitation.token}"
+        )
+        send_mail(
+            subject="You're invited to PCEP Prep Coach",
+            message=render_to_string(
+                "accounts/email/invite.txt",
+                {
+                    "invited_by": (
+                        self.request.user.get_full_name()
+                        or self.request.user.username
+                    ),
+                    "register_url": register_url,
+                },
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        messages.success(self.request, f"Invitation sent to {email}.")
+        return super().form_valid(form)
+
+
+class InviteListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    """Staff-only: view all sent invitations."""
+
+    template_name = "accounts/invite_list.html"
+    context_object_name = "invitations"
+    paginate_by = 25
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get_queryset(self):
+        return Invitation.objects.select_related("invited_by").order_by("-created_at")
 
 
 class ProfileView(LoginRequiredMixin, TemplateView):

@@ -12,6 +12,31 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_dotenv_file(path: Path) -> None:
+    """Load key=value pairs from a local .env file into os.environ."""
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        # Remove simple surrounding quotes if present.
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+_load_dotenv_file(BASE_DIR / ".env")
+
+
+def _csv_env(name: str, default: str = "") -> list[str]:
+    """Return a comma-separated env var as a cleaned list."""
+    raw = os.environ.get(name, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
 # In production, set DJANGO_SECRET_KEY env var and DEBUG=False
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
 
@@ -24,7 +49,8 @@ if not SECRET_KEY:
             "DJANGO_SECRET_KEY environment variable is required in production"
         )
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = _csv_env("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+CSRF_TRUSTED_ORIGINS = _csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 
 # ── Apps ──────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -166,11 +192,31 @@ _HTTPS = os.environ.get("DJANGO_HTTPS", "false").lower() in ("true", "1", "yes")
 SECURE_SSL_REDIRECT = _HTTPS
 SESSION_COOKIE_SECURE = _HTTPS
 CSRF_COOKIE_SECURE = _HTTPS
+if _HTTPS:
+    # Render terminates TLS at the proxy and forwards the original scheme.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = 31536000 if _HTTPS else 0      # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _HTTPS
 SECURE_HSTS_PRELOAD = _HTTPS
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 X_FRAME_OPTIONS = "DENY"                             # already default; explicit here
+
+# ── Email (SMTP) ─────────────────────────────────────────────────────
+# Defaults are set for Gmail SMTP, override with env vars as needed.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.smtp.EmailBackend",
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@localhost")
 
 # Content Security Policy (basic; tighten nonce-based script-src in production)
 # Set per-request via the CSPMiddleware below, or configure django-csp if installed.

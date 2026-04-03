@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Invitations — PCEP Prep Coach{% endblock title %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0"><i class="bi bi-envelope-check me-2"></i>Invitations</h2>
+  <a href="{% url 'accounts:invite_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i>Send New Invite
+  </a>
+</div>
+
+{% if invitations %}
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Email</th>
+        <th>Invited by</th>
+        <th>Sent</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invitations %}
+      <tr>
+        <td>{{ inv.email }}</td>
+        <td>{{ inv.invited_by.username|default:"—" }}</td>
+        <td>{{ inv.created_at|date:"M j, Y" }}</td>
+        <td>
+          {% if inv.accepted_at %}
+            <span class="badge bg-success">Accepted {{ inv.accepted_at|date:"M j, Y" }}</span>
+          {% elif inv.is_active %}
+            <span class="badge bg-warning text-dark">Pending</span>
+          {% else %}
+            <span class="badge bg-secondary">Revoked</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if is_paginated %}
+<nav>
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info">No invitations sent yet. <a href="{% url 'accounts:invite_create' %}">Send the first one.</a></div>
+{% endif %}
+{% endblock content %}
