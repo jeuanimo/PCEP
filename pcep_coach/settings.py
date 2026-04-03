@@ -113,6 +113,7 @@ if _DATABASE_URL:
             default=_DATABASE_URL,
             conn_max_age=600,          # keep connections alive for 10 min
             conn_health_checks=True,   # drop stale connections before reuse
+            engine="django.db.backends.postgresql",
         )
     }
 else:
