@@ -2,7 +2,7 @@
 {% block title %}{% if mode == 'exam' %}Exam Mode{% else %}Quiz{% endif %} — PCEP Prep Coach{% endblock title %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="page-header-stack mb-4">
   <h1>
     {% if mode == 'exam' %}<i class="bi bi-clock-history me-2"></i>Exam Mode
     {% else %}<i class="bi bi-pencil-square me-2"></i>Quiz: {{ topic.name }}{% endif %}
@@ -19,13 +19,13 @@
   {% for q in questions %}
   <input type="hidden" name="question_ids" value="{{ q.pk }}">
   <div class="card card-coach p-4 mb-3">
-    <div class="d-flex justify-content-between">
+    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
       <h5 class="mb-2">Question {{ forloop.counter }}</h5>
       <span class="badge bg-secondary">{{ q.get_question_type_display }}</span>
     </div>
-    <p>{{ q.text }}</p>
+    <p class="quiz-card-question mb-3">{{ q.text }}</p>
     {% if q.code_snippet %}
-    <pre class="bg-dark text-light p-3 rounded mb-3"><code>{{ q.code_snippet }}</code></pre>
+    <pre class="bg-dark text-light p-3 rounded mb-3 quiz-code-block"><code>{{ q.code_snippet }}</code></pre>
     {% endif %}
 
     {% if q.question_type == 'mc' or q.question_type == 'tf' %}
@@ -48,7 +48,7 @@
   </div>
   {% endfor %}
 
-  <div class="text-center">
+  <div class="text-center text-md-start">
     <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-circle me-1"></i>Submit Answers</button>
   </div>
 </form>

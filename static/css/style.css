@@ -179,6 +179,46 @@ code {
   -webkit-overflow-scrolling: touch;
 }
 
+.page-header-stack {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.quiz-card-question,
+.lab-description,
+.lab-attempt-code,
+.output-pre {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.quiz-code-block,
+.lab-code-block {
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.lab-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.lab-actions .btn {
+  flex-shrink: 0;
+}
+
+.lab-status-badge {
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+}
+
 /* ── Heatmap squares ───────────────────────────────────────────────── */
 .heatmap-cell {
   width: 28px;
@@ -219,6 +259,36 @@ code {
   .code-editor {
     min-height: 280px;
     font-size: .85rem;
+  }
+
+  .quiz-code-block,
+  .lab-code-block,
+  .output-pre {
+    font-size: .85rem;
+  }
+
+  .page-header-stack h1,
+  .page-header-stack h2,
+  .page-header-stack h4 {
+    margin-bottom: 0;
+  }
+
+  .page-header-stack > * {
+    width: 100%;
+  }
+
+  .page-header-stack .badge {
+    width: fit-content;
+  }
+
+  .lab-actions {
+    align-items: stretch;
+  }
+
+  .lab-actions .btn,
+  .lab-actions .lab-status-badge {
+    width: 100%;
+    justify-content: center;
   }
 
   main.container {

@@ -27,25 +27,25 @@
         <span class="badge bg-secondary ms-1">{{ challenge.topic.name }}</span>
       </div>
 
-      <div class="mb-3">{{ challenge.description|safe }}</div>
+      <div class="mb-3 lab-description">{{ challenge.description|safe }}</div>
 
       {% if challenge.test_input %}
       <div class="p-2 bg-light rounded mb-3">
         <small class="fw-semibold">Sample Input:</small>
-        <pre class="mb-0 mt-1"><code>{{ challenge.test_input }}</code></pre>
+        <pre class="mb-0 mt-1 lab-code-block"><code>{{ challenge.test_input }}</code></pre>
       </div>
       {% endif %}
 
       {% if expected_preview %}
       <div class="p-2 bg-light rounded mb-3">
         <small class="fw-semibold">Expected Output (preview):</small>
-        <pre class="mb-0 mt-1"><code>{{ expected_preview }}</code></pre>
+        <pre class="mb-0 mt-1 lab-code-block"><code>{{ expected_preview }}</code></pre>
       </div>
       {% endif %}
 
       {# ── Hints section ──────────────────────────────────────────── #}
       <div class="border-top pt-3 mt-2">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
           <button class="btn btn-outline-warning btn-sm" id="hint-btn" onclick="getHint()"
                   {% if hints_available == 0 %}disabled title="Submit at least one attempt to unlock hints"{% endif %}>
             <i class="bi bi-lightbulb me-1"></i>Get Hint
@@ -98,7 +98,7 @@
         {% endif %}
         <details class="mt-1">
           <summary class="small text-primary clickable">View submitted code</summary>
-          <pre class="bg-light p-2 rounded mt-1 small mb-0"><code>{{ a.submitted_code }}</code></pre>
+          <pre class="bg-light p-2 rounded mt-1 small mb-0 lab-attempt-code"><code>{{ a.submitted_code }}</code></pre>
         </details>
       </div>
       {% endfor %}
@@ -109,21 +109,21 @@
   {# ── Right column: Code editor + output ────────────────────────── #}
   <div class="col-lg-7">
     <div class="card card-coach p-3">
-      <div class="d-flex justify-content-between align-items-center mb-2">
+      <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
         <h5 class="mb-0"><i class="bi bi-code-slash me-1"></i>Your Code</h5>
         <button class="btn btn-outline-secondary btn-sm" onclick="resetCode()" title="Reset to starter code">
           <i class="bi bi-arrow-counterclockwise"></i> Reset
         </button>
       </div>
       {{ form.code }}
-      <div class="d-flex justify-content-between align-items-center mt-3">
+      <div class="lab-actions mt-3">
         <button class="btn btn-primary btn-lg" id="run-btn" onclick="submitCode()">
           <i class="bi bi-play-fill me-1"></i>Run Code
         </button>
         <button class="btn btn-outline-danger btn-sm" id="reset-progress-btn" onclick="resetChallengeProgress()">
           <i class="bi bi-trash3 me-1"></i>Reset Lab Progress
         </button>
-        <div id="result-badge"></div>
+        <div id="result-badge" class="lab-status-badge"></div>
       </div>
       {{ form.time_taken }}
     </div>
@@ -134,7 +134,7 @@
         <h6 class="mb-0">Output</h6>
         <small class="text-muted" id="attempt-counter"></small>
       </div>
-      <pre id="output-area" class="bg-dark text-light p-3 rounded mb-0"></pre>
+      <pre id="output-area" class="bg-dark text-light p-3 rounded mb-0 output-pre"></pre>
       <div id="error-area" class="mt-2 d-none-initial">
         <pre class="text-danger bg-danger bg-opacity-10 p-2 rounded mb-0 small" id="error-text"></pre>
       </div>
