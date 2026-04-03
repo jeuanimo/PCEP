@@ -31,19 +31,19 @@
     {% if q.question_type == 'mc' or q.question_type == 'tf' %}
       {% for choice in q.choices.all %}
       <label class="quiz-option d-block">
-        <input type="radio" name="question_{{ q.pk }}" value="{{ choice.pk }}" class="me-2">
+        <input type="radio" name="q_{{ q.pk }}" value="{{ choice.pk }}" class="me-2">
         {{ choice.text }}
       </label>
       {% endfor %}
     {% elif q.question_type == 'ms' %}
       {% for choice in q.choices.all %}
       <label class="quiz-option d-block">
-        <input type="checkbox" name="question_{{ q.pk }}" value="{{ choice.pk }}" class="me-2">
+        <input type="checkbox" name="q_{{ q.pk }}" value="{{ choice.pk }}" class="me-2">
         {{ choice.text }}
       </label>
       {% endfor %}
     {% elif q.question_type == 'fib' or q.question_type == 'code_output' or q.question_type == 'short' %}
-      <input type="text" name="text_{{ q.pk }}" class="form-control" placeholder="Type your answer...">
+      <input type="text" name="q_{{ q.pk }}_text" class="form-control" placeholder="Type your answer...">
     {% endif %}
   </div>
   {% endfor %}

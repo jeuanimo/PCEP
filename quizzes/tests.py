@@ -1,8 +1,10 @@
 """Tests for quizzes.services — question picking and answer scoring."""
+from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.urls import reverse
 
 from learning.models import Domain, Topic
-from .models import AnswerChoice, Question
+from .models import AnswerChoice, Question, QuizAttempt, UserAnswer
 from .services import (
     analyse_weak_areas,
     pick_domain_questions,
@@ -168,3 +170,156 @@ class AnalyseWeakAreasTests(TestCase):
 
     def test_empty_answers_returns_empty(self):
         self.assertEqual(analyse_weak_areas([]), [])
+
+
+class SubmitQuizScoringTests(TestCase):
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username="quizuser",
+            password="testpass123",
+        )
+        self.client.force_login(self.user)
+        self.domain = _make_domain()
+        self.topic = _make_topic(self.domain)
+
+    def test_multiple_choice_correct_answer_is_counted(self):
+        question = _make_question(self.topic, text="Correct MC")
+        correct_choice = question.choices.get(is_correct=True)
+        attempt = QuizAttempt.objects.create(
+            user=self.user,
+            mode="topic",
+            topic=self.topic,
+            total_questions=1,
+        )
+
+        response = self.client.post(
+            reverse("quizzes:submit_quiz", args=[attempt.pk]),
+            {
+                "question_ids": [str(question.pk)],
+                f"q_{question.pk}": str(correct_choice.pk),
+            },
+        )
+
+        attempt.refresh_from_db()
+        answer = UserAnswer.objects.get(attempt=attempt, question=question)
+
+        self.assertRedirects(response, reverse("quizzes:quiz_results", args=[attempt.pk]))
+        self.assertTrue(answer.is_correct)
+        self.assertEqual(attempt.correct_count, 1)
+        self.assertEqual(attempt.total_questions, 1)
+        self.assertEqual(attempt.score, 100.0)
+        self.assertTrue(attempt.is_passed)
+
+    def test_text_answer_correct_response_is_counted(self):
+        question = Question.objects.create(
+            topic=self.topic,
+            domain=self.domain,
+            text="Type the function",
+            question_type="fib",
+            is_active=True,
+        )
+        AnswerChoice.objects.create(
+            question=question,
+            text="print()",
+            is_correct=True,
+            order=1,
+        )
+        attempt = QuizAttempt.objects.create(
+            user=self.user,
+            mode="topic",
+            topic=self.topic,
+            total_questions=1,
+        )
+
+        self.client.post(
+            reverse("quizzes:submit_quiz", args=[attempt.pk]),
+            {
+                "question_ids": [str(question.pk)],
+                f"q_{question.pk}_text": "print()",
+            },
+        )
+
+        attempt.refresh_from_db()
+        answer = UserAnswer.objects.get(attempt=attempt, question=question)
+
+        self.assertEqual(answer.text_answer, "print()")
+        self.assertTrue(answer.is_correct)
+        self.assertEqual(attempt.correct_count, 1)
+        self.assertEqual(attempt.score, 100.0)
+
+    def test_multi_select_requires_exact_set_of_correct_choices(self):
+        question = Question.objects.create(
+            topic=self.topic,
+            domain=self.domain,
+            text="Pick both correct answers",
+            question_type="ms",
+            is_active=True,
+        )
+        correct_one = AnswerChoice.objects.create(
+            question=question,
+            text="First correct",
+            is_correct=True,
+            order=1,
+        )
+        correct_two = AnswerChoice.objects.create(
+            question=question,
+            text="Second correct",
+            is_correct=True,
+            order=2,
+        )
+        wrong = AnswerChoice.objects.create(
+            question=question,
+            text="Wrong",
+            is_correct=False,
+            order=3,
+        )
+        attempt = QuizAttempt.objects.create(
+            user=self.user,
+            mode="topic",
+            topic=self.topic,
+            total_questions=1,
+        )
+
+        self.client.post(
+            reverse("quizzes:submit_quiz", args=[attempt.pk]),
+            {
+                "question_ids": [str(question.pk)],
+                f"q_{question.pk}": [
+                    str(correct_one.pk),
+                    str(correct_two.pk),
+                ],
+            },
+        )
+
+        attempt.refresh_from_db()
+        answer = UserAnswer.objects.get(attempt=attempt, question=question)
+
+        self.assertTrue(answer.is_correct)
+        self.assertEqual(answer.selected_choices.count(), 2)
+        self.assertEqual(attempt.correct_count, 1)
+        self.assertEqual(attempt.score, 100.0)
+
+        second_attempt = QuizAttempt.objects.create(
+            user=self.user,
+            mode="topic",
+            topic=self.topic,
+            total_questions=1,
+        )
+        self.client.post(
+            reverse("quizzes:submit_quiz", args=[second_attempt.pk]),
+            {
+                "question_ids": [str(question.pk)],
+                f"q_{question.pk}": [
+                    str(correct_one.pk),
+                    str(wrong.pk),
+                ],
+            },
+        )
+
+        second_attempt.refresh_from_db()
+        wrong_answer = UserAnswer.objects.get(attempt=second_attempt, question=question)
+
+        self.assertFalse(wrong_answer.is_correct)
+        self.assertEqual(second_attempt.correct_count, 0)
+        self.assertEqual(second_attempt.score, 0.0)
