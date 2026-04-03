@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bleach_tags %}
 {% block title %}{{ challenge.title }} — Code Lab{% endblock title %}
 {% block content %}
 <nav aria-label="breadcrumb" class="mb-3">
@@ -27,7 +28,7 @@
         <span class="badge bg-secondary ms-1">{{ challenge.topic.name }}</span>
       </div>
 
-      <div class="mb-3 lab-description">{{ challenge.description|safe }}</div>
+      <div class="mb-3 lab-description">{{ challenge.description|bleach_safe }}</div>
 
       {% if challenge.test_input %}
       <div class="p-2 bg-light rounded mb-3">
