@@ -35,6 +35,20 @@ services:
     plan: free
     maxmemoryPolicy: allkeys-lru
 
+  - type: cron
+    name: pcep-keepalive-healthz
+    runtime: python
+    plan: free
+    schedule: "*/10 * * * *"
+    startCommand: python -c "import urllib.request; print(urllib.request.urlopen('https://pcep.onrender.com/healthz/', timeout=20).status)"
+
+  - type: cron
+    name: pcep-keepalive-home
+    runtime: python
+    plan: free
+    schedule: "5-59/10 * * * *"
+    startCommand: python -c "import urllib.request; print(urllib.request.urlopen('https://pcep.onrender.com/', timeout=20).status)"
+
 databases:
   - name: pcep-db
     plan: free
