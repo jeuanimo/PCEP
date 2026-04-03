@@ -148,7 +148,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # Whitenoise serves static files efficiently in production.
 # Run `python manage.py collectstatic` before deploying.
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
