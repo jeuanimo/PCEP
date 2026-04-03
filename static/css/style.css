@@ -11,6 +11,18 @@
 body {
   background-color: var(--coach-bg);
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+pre,
+code {
+  overflow-wrap: anywhere;
 }
 
 /* ── Cards ─────────────────────────────────────────────────────────── */
@@ -132,6 +144,41 @@ body {
   padding: 3rem 2rem;
 }
 
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.hero-actions .btn {
+  min-width: 220px;
+}
+
+.navbar-brand {
+  max-width: calc(100% - 4rem);
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.navbar .dropdown-toggle.btn,
+.nav-link-button {
+  border: 0;
+  box-shadow: none;
+}
+
+.nav-link-button {
+  padding: .5rem 1rem;
+}
+
+.content-table {
+  min-width: 640px;
+}
+
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── Heatmap squares ───────────────────────────────────────────────── */
 .heatmap-cell {
   width: 28px;
@@ -142,8 +189,92 @@ body {
 
 /* ── Mobile adjustments ────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .hero { padding: 2rem 1rem; }
-  .flashcard-front, .flashcard-back { padding: 1rem; min-height: 160px; }
+  .hero {
+    padding: 2rem 1rem;
+    border-radius: 12px;
+  }
+
+  .hero .display-5 {
+    font-size: 2rem;
+  }
+
+  .hero-actions {
+    gap: .75rem;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .flashcard {
+    min-height: 180px;
+  }
+
+  .flashcard-front, .flashcard-back {
+    padding: 1rem;
+    min-height: 180px;
+  }
+
+  .code-editor {
+    min-height: 280px;
+    font-size: .85rem;
+  }
+
+  main.container {
+    padding-left: .85rem;
+    padding-right: .85rem;
+  }
+
+  .card-coach:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .navbar .container {
+    align-items: flex-start;
+  }
+
+  .navbar-collapse {
+    width: 100%;
+    padding-top: .75rem;
+  }
+
+  .navbar-nav {
+    gap: .25rem;
+  }
+
+  .navbar .nav-link,
+  .navbar .dropdown-toggle,
+  .navbar .dropdown-item,
+  .nav-link-button {
+    text-align: left;
+  }
+
+  .navbar .nav-link,
+  .navbar .dropdown-toggle,
+  .nav-link-button {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .navbar .dropdown-menu {
+    border: 0;
+    padding-left: .75rem;
+    box-shadow: none;
+  }
+
+  .navbar .btn.btn-light.btn-sm.nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0 !important;
+    margin-top: .5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 /* ── Utility: clickable summary ────────────────────────────────────── */

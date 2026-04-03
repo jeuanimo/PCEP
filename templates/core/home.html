@@ -6,7 +6,7 @@
 <div class="hero text-center mb-5">
   <h1 class="display-5 fw-bold mb-3"><i class="bi bi-trophy me-2"></i>PCEP Prep Coach</h1>
   <p class="lead mb-4">Your personal study partner for the <strong>PCEP-30-02</strong> Certified Entry-Level Python Programmer exam.</p>
-  <div class="d-flex justify-content-center gap-3 flex-wrap">
+  <div class="hero-actions">
     {% if user.is_authenticated %}
     <a href="{% url 'progress:dashboard' %}" class="btn btn-light btn-lg"><i class="bi bi-speedometer2 me-1"></i>My Dashboard</a>
     <a href="{% url 'learning:domain_list' %}" class="btn btn-outline-light btn-lg"><i class="bi bi-book me-1"></i>Start Learning</a>
